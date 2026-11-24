@@ -59,8 +59,14 @@ Latent C hazard reproduced: merging two versions whose paths contain null-subtre
 node dereferences the null subtree (`ts_subtree_dynamic_precedence`); the test never merges in
 scripts that push null subtrees. `stack.c` is now dropped from the C build.
 
+## Tree (checkpoint 3, third unit)
+`tree.rs` (`TSTree`, copy/delete/edit/included ranges/root nodes/changed ranges/dot graph) and the
+`TreeCursor` types in `tree_cursor.rs`. `tests/tree.rs` compares it with the renamed C `tree.c` on
+trees from the real parser: copy and ref counts, edits (also with included ranges), reparse and
+changed ranges for 100 random edits, root node offsets, dot-graph output. Three seeded mutations caught.
+
 ## Next (rest of checkpoint 3)
-`tree`,
+
 `tree_cursor`, `get_changed_ranges`, `parser`, then `node`. Risks to read first in `MAP.md`:
 `Subtree` bitfields and low-bit pointer tagging need hand-written accessors with layout tests;
 C and Rust units must share those structs while mixed. `query.c` stays C until the last wave.

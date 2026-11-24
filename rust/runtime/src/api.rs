@@ -22,11 +22,7 @@ pub use crate::parser_abi::TSLanguage;
 pub struct TSParser {
     _unused: [u8; 0],
 }
-#[repr(C)]
-#[derive(Debug)]
-pub struct TSTree {
-    _unused: [u8; 0],
-}
+pub use crate::tree::TSTree;
 #[repr(C)]
 #[derive(Debug)]
 pub struct TSQuery {

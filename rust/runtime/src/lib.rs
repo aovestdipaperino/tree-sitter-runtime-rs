@@ -14,4 +14,6 @@ pub mod point;
 pub mod reduce_action;
 pub mod stack;
 pub mod subtree;
+pub mod tree;
+pub mod tree_cursor;
 pub mod unicode;

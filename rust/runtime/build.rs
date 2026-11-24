@@ -283,6 +283,24 @@ fn main() {
         .define("ts_stack_clear", "c_ref_stack_clear")
         .define("ts_stack_print_dot_graph", "c_ref_stack_print_dot_graph")
         .file(src.join("stack.c"))
+        .define("ts_tree_new", "c_ref_tree_new")
+        .define("ts_tree_copy", "c_ref_tree_copy")
+        .define("ts_tree_delete", "c_ref_tree_delete")
+        .define("ts_tree_root_node", "c_ref_tree_root_node")
+        .define(
+            "ts_tree_root_node_with_offset",
+            "c_ref_tree_root_node_with_offset",
+        )
+        .define("ts_tree_language", "c_ref_tree_language")
+        .define("ts_tree_edit", "c_ref_tree_edit")
+        .define("ts_tree_included_ranges", "c_ref_tree_included_ranges")
+        .define(
+            "ts_tree_get_changed_ranges",
+            "c_ref_tree_get_changed_ranges",
+        )
+        .define("ts_tree_print_dot_graph", "c_ref_tree_print_dot_graph")
+        .define("_ts_dup", "c_ref__ts_dup")
+        .file(src.join("tree.c"))
         .file(shim.join("alloc_ref.c"))
         .file(src.join("alloc.c"))
         .compile("tree-sitter-shim");

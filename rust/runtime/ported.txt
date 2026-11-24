@@ -8,3 +8,4 @@ lexer.c
 language.c
 subtree.c
 stack.c
+tree.c
