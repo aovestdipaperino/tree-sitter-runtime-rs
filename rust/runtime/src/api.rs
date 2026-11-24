@@ -135,7 +135,7 @@ pub struct TSTreeCursor {
     pub context: [u32; 3usize],
 }
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TSQueryCapture {
     pub node: TSNode,
     pub index: u32,
@@ -159,7 +159,7 @@ pub const TSQueryPredicateStepTypeCapture: TSQueryPredicateStepType = 1;
 pub const TSQueryPredicateStepTypeString: TSQueryPredicateStepType = 2;
 pub type TSQueryPredicateStepType = ::core::ffi::c_uint;
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TSQueryPredicateStep {
     pub type_: TSQueryPredicateStepType,
     pub value_id: u32,

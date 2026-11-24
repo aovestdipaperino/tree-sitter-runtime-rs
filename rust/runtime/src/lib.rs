@@ -14,6 +14,7 @@ pub mod node;
 pub mod parser;
 pub mod parser_abi;
 pub mod point;
+pub mod query;
 pub mod reduce_action;
 pub mod reusable_node;
 pub mod stack;
