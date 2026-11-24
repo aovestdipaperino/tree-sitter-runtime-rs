@@ -3,7 +3,7 @@
 Architecture decision records for the port of the tree-sitter C runtime to Rust. Numbered in order,
 never renumbered; a changed decision gets a new ADR that supersedes the old one.
 
-## ADR-001: Port tree-sitter 0.26.13
+## ADR-001: Port tree-sitter (0.26.13, rebased to v0.27.2 by ADR-013)
 Status: accepted (2026-11-24)
 Context: tokensave's lock pins tree-sitter 0.26.9, the newest on crates.io here is 0.26.13, and a
 fresh build resolves 0.26.13. The C differs by about 360 lines in six files (`api.h`, `parser.c`,
@@ -85,7 +85,7 @@ Decision: the lite-tier release work (tests, Linux differential CI, upstream con
 release 0.2.1) ran before this port started.
 
 ## ADR-011: Mixed build, one unit at a time
-Status: proposed by the agent, not yet confirmed (2026-11-24)
+Status: accepted (2026-11-24, user: "go with recommendations")
 Context: the runtime's internal structs (`Subtree`, `TSParser`, `Stack`, `Length`, ...) are shared
 by every `.c` file, and `lib.c` includes them all as one translation unit.
 Decision: build the C units as separate objects instead of `lib.c`. A ported unit's `.c` file is
