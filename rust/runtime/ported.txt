@@ -11,3 +11,4 @@ stack.c
 tree.c
 tree_cursor.c
 get_changed_ranges.c
+parser.c

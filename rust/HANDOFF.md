@@ -85,16 +85,21 @@ three mutations (error-cost equality, external-token flag, final size comparison
 sources have no external-scanner tokens and few error nodes. `reusable_node.rs` is a header-only port with
 no separate test yet; the parser port exercises it. Note: a mutation making `iterator_descend` use `>=` hangs.
 
-## Next (rest of checkpoint 3)
+## parser.c (ported, 2026-11-24)
+`runtime/src/parser.rs`, one Rust function per C function, same order, raw pointers, `log!` macro
+over libc `snprintf` so parse logs are byte-identical. Wasm branches still call the C stubs in
+`wasm_store.c`. Verified only by the whole-library harness (`./target/release/runtime-diff-harness`,
+9599 comparisons, 0 mismatches), which now also compares the parse and lex log text and a
+progress-callback cancel-then-resume scenario. Seeded mutations caught: version limits, cost
+difference, tree selection, missing-token insertion, recovery depth, callback op count. Not caught:
+the operation-count scaling in `parser_balance_subtree` (needs a very long repetition cancelled
+during balancing).
 
-`tree_cursor`, `get_changed_ranges`, `parser`, then `node`. Risks to read first in `MAP.md`:
-`Subtree` bitfields and low-bit pointer tagging need hand-written accessors with layout tests;
-C and Rust units must share those structs while mixed. `query.c` stays C until the last wave.
+## Next
+`node.c`, then `query.c` (last), lib.c/atomic.h/wasm stubs; then the binding fork and tokensave test.
 
 ## Open questions for the user
-- ADR-011 (mixed build, one unit at a time) is proposed, not confirmed.
-- ADR-001 ports tree-sitter 0.26.13, not tokensave's pinned 0.26.9: flagged for veto.
-- No GitHub remote exists for this repo yet; creating a public repo needs a go-ahead.
+- None open. ADR-011 and the v0.27.2 baseline were confirmed; the repo is public.
 
 ## Patched reference (ADR-013)
 Reference C = pristine v0.27.2 + `rust/patches/*.patch`. Add a fix by adding a patch (generated

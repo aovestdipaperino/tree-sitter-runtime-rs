@@ -195,6 +195,12 @@ fn main() -> ExitCode {
                     let b = rf::Session::new(lang).parse(text, 0, chunk, false);
                     stats.check(kind, name, idx, &a, &b);
                 }
+                // cancelled by the progress callback, then resumed
+                for limit in [1u32, 2, 5, 40] {
+                    let a = rt::Session::new(lang).parse_cancelling(text, limit);
+                    let b = rf::Session::new(lang).parse_cancelling(text, limit);
+                    stats.check("cancel-resume", name, idx, &a, &b);
+                }
                 // UTF-16 input (little and big endian)
                 for (kind, enc, big) in [("utf16le", 1u32, false), ("utf16be", 2u32, true)] {
                     let data = utf16(text, big);

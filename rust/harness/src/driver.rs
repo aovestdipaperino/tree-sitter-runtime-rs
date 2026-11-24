@@ -29,6 +29,12 @@ unsafe extern "C" fn read_cb(payload: *mut c_void, byte_index: u32, _position: T
 pub struct Session {
     parser: *mut TSParser,
     tree: *mut TSTree,
+    log: Box<String>,
+}
+
+unsafe extern "C" fn log_cb(payload: *mut c_void, ty: TSLogType, msg: *const c_char) {
+    let log = &mut *(payload as *mut String);
+    let _ = writeln!(log, "LOG {ty} {}", CStr::from_ptr(msg).to_string_lossy());
 }
 
 /// What one parse produced: the S-expression and a node-by-node dump, and the changed ranges
@@ -39,7 +45,9 @@ impl Session {
     pub unsafe fn new(lang: *const c_void) -> Session {
         let parser = ts_parser_new();
         assert!(ts_parser_set_language(parser, lang as *const TSLanguage), "language rejected");
-        Session { parser, tree: core::ptr::null_mut() }
+        let mut log = Box::new(String::new());
+        ts_parser_set_logger(parser, TSLogger { payload: &mut *log as *mut String as *mut c_void, log: Some(log_cb) });
+        Session { parser, tree: core::ptr::null_mut(), log }
     }
 
     pub unsafe fn set_ranges(&mut self, ranges: &[RangeArgs]) -> bool {
@@ -74,9 +82,10 @@ impl Session {
         let reader = Reader { data: data.as_ptr(), len: data.len(), chunk: chunk.max(1) };
         let input = TSInput { payload: &reader as *const Reader as *mut c_void, read: Some(read_cb), encoding, decode: None };
         let old = if incremental { self.tree } else { core::ptr::null_mut() };
+        self.log.clear();
         let new = ts_parser_parse(self.parser, old, input);
         if new.is_null() {
-            return ("<null tree>".to_string(), Vec::new());
+            return (format!("<null tree>\n{}", self.log), Vec::new());
         }
         let mut changed = Vec::new();
         if !old.is_null() {
@@ -88,12 +97,53 @@ impl Session {
             }
             free(p as *mut c_void);
         }
-        let dump = dump_tree(new);
+        let mut dump = dump_tree(new);
+        dump.push_str(&self.log);
         if !self.tree.is_null() {
             ts_tree_delete(self.tree);
         }
         self.tree = new;
         (dump, changed)
+    }
+}
+
+struct Cancel {
+    calls: u32,
+    limit: u32,
+    seen: Vec<(u32, bool)>,
+}
+
+unsafe extern "C" fn progress_cb(state: *mut TSParseState) -> bool {
+    let st = &*state;
+    let c = &mut *(st.payload as *mut Cancel);
+    c.seen.push((st.current_byte_offset, st.has_error));
+    c.calls += 1;
+    c.calls >= c.limit
+}
+
+impl Session {
+    /// Parse with a progress callback that cancels after `limit` calls, then resume the same
+    /// parse without one. The callback's observations and both results are the outcome.
+    pub unsafe fn parse_cancelling(&mut self, data: &[u8], limit: u32) -> Outcome {
+        let reader = Reader { data: data.as_ptr(), len: data.len(), chunk: data.len().max(1) };
+        let input = |r: &Reader| TSInput { payload: r as *const Reader as *mut c_void, read: Some(read_cb), encoding: 0, decode: None };
+        let mut cancel = Cancel { calls: 0, limit, seen: Vec::new() };
+        self.log.clear();
+        let options = TSParseOptions { payload: &mut cancel as *mut Cancel as *mut c_void, progress_callback: Some(progress_cb) };
+        let mut out = String::new();
+        let mut tree = ts_parser_parse_with_options(self.parser, core::ptr::null(), input(&reader), options);
+        let _ = writeln!(out, "CANCEL first_null={} seen={:?}", tree.is_null(), cancel.seen);
+        if tree.is_null() {
+            tree = ts_parser_parse(self.parser, core::ptr::null(), input(&reader));
+        }
+        if tree.is_null() {
+            out.push_str("<null tree>\n");
+        } else {
+            out.push_str(&dump_tree(tree));
+            ts_tree_delete(tree);
+        }
+        out.push_str(&self.log);
+        (out, Vec::new())
     }
 }
 
