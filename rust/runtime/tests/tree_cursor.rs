@@ -53,6 +53,7 @@ unsafe extern "C" {
     fn ts_tree_root_node(t: *const TSTree) -> TSNode;
     fn ts_node_child_count(n: TSNode) -> u32;
     fn ts_node_child(n: TSNode, i: u32) -> TSNode;
+    fn ts_node_start_byte(n: TSNode) -> u32;
 }
 
 struct Rng(u64);
@@ -119,6 +120,10 @@ fn languages() -> Vec<(&'static str, *const TSLanguage, &'static str)> {
             "#include <stdio.h>\nstruct s { int a; char *b; };\nstatic int f(int x, const char *y) {\n  for (int i = 0; i < x; i++) { printf(\"%s %d\\n\", y, i); }\n  return x ? 1 : 0;\n}\nint main(void) { return f(2, \"a\"); }\n",
         ),
     ]
+}
+
+unsafe fn ts_node_start_byte_of(n: TSNode) -> u32 {
+    unsafe { ts_node_start_byte(n) }
 }
 
 fn cstr(p: *const c_char) -> Option<String> {
@@ -250,6 +255,9 @@ fn random_walks_match_c() {
                 };
                 let mut a = ts_tree_cursor_new(start);
                 let mut b = c_ref_tree_cursor_new(start);
+                let mut maybe_hidden = false;
+                let mut origin = start;
+                let mut spare_origin = start;
                 let mut spare_a = ts_tree_cursor_copy(&a);
                 let mut spare_b = c_ref_tree_cursor_copy(&b);
                 assert_eq!(view(&a, true), view(&b, false), "{name} start");
@@ -334,18 +342,46 @@ fn random_walks_match_c() {
                                 c_ref_tree_cursor_delete(&mut spare_b);
                                 spare_a = ts_tree_cursor_copy(&a);
                                 spare_b = c_ref_tree_cursor_copy(&b);
+                                spare_origin = origin;
                             } else {
                                 ts_tree_cursor_reset_to(&mut a, &spare_a);
                                 c_ref_tree_cursor_reset_to(&mut b, &spare_b);
+                                origin = spare_origin;
                             }
                         }
                         _ => {
                             let n = if rng.below(2) == 0 { root } else { start };
                             ts_tree_cursor_reset(&mut a, n);
                             c_ref_tree_cursor_reset(&mut b, n);
+                            origin = n;
                         }
                     }
                     assert_eq!(view(&a, true), view(&b, false), "{ctx}");
+                    // Independent of the C: a visible node's descendant index, given to a fresh cursor,
+                    // must lead back to the same node (this is what the reverse-traversal fix restored).
+                    if op == 15 {
+                        maybe_hidden = false;
+                    }
+                    if (10..=13).contains(&op) || op == 14 {
+                        maybe_hidden = true;
+                    }
+                    if !maybe_hidden {
+                        let mut fresh = ts_tree_cursor_new(origin);
+                        ts_tree_cursor_goto_descendant(
+                            &mut fresh,
+                            ts_tree_cursor_current_descendant_index(&a),
+                        );
+                        let (x, y) = (
+                            ts_tree_cursor_current_node(&a),
+                            ts_tree_cursor_current_node(&fresh),
+                        );
+                        assert_eq!(
+                            (x.id, ts_node_start_byte_of(x)),
+                            (y.id, ts_node_start_byte_of(y)),
+                            "{ctx} descendant index"
+                        );
+                        ts_tree_cursor_delete(&mut fresh);
+                    }
                     steps += 1;
                 }
                 ts_tree_cursor_delete(&mut a);
@@ -362,11 +398,11 @@ fn random_walks_match_c() {
 
 /// Walks backwards over every child of a node with 600 children, from the last to the first.
 ///
-/// The C compares `(int8_t)child_index` with -1 in the backward iterator, so an index of 255 ends
-/// the iteration early; no grammar produces nodes that flat, so the tree is built by hand from
-/// subtrees. The port must stop at exactly the same place.
+/// Upstream 0.26.13 compared `(int8_t)child_index` with -1 in the backward iterator, ending the
+/// walk at child 511 (and 255). It was fixed upstream (9a15b6afa) and in the port and the reference
+/// (rust/patches, ADR-013); no grammar produces nodes that flat, so the tree is built by hand.
 #[test]
-fn previous_sibling_walk_over_wide_node_matches_c() {
+fn previous_sibling_walk_over_wide_node_reaches_first_child() {
     use tree_sitter_runtime_rs::{array::Array, length::*, subtree::*, tree::*};
     unsafe {
         let lang = common::language();
@@ -434,7 +470,10 @@ fn previous_sibling_walk_over_wide_node_matches_c() {
             back += 1;
         }
         eprintln!("walked {forward} forward, {back} back");
-        assert!(back < 599, "the C quirk should end the walk early");
+        assert_eq!(
+            back, 599,
+            "the walk must reach the first child (upstream fix 9a15b6afa)"
+        );
         ts_tree_cursor_delete(&mut a);
         c_ref_tree_cursor_delete(&mut b);
         ts_tree_delete(tree);

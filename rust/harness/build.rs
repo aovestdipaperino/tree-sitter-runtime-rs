@@ -1,7 +1,11 @@
 //! Builds the reference: the unmodified C runtime (`lib.c`, one translation unit) with every
 //! external symbol renamed to `ref_<name>`, so it can be linked next to the Rust runtime. Also
 //! generates a copy of the bindgen bindings whose functions link to the renamed symbols.
-use std::{env, fs, path::PathBuf, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 fn configure(b: &mut cc::Build, src: &PathBuf, include: &PathBuf) {
     b.std("c11")
@@ -18,14 +22,58 @@ fn configure(b: &mut cc::Build, src: &PathBuf, include: &PathBuf) {
         .file(src.join("lib.c"));
 }
 
+/// The reference C sources: upstream 0.26.13 plus the upstream fixes listed in `rust/patches/`
+/// (ADR-013). Copied to `OUT_DIR` and patched there; the pristine `src/` is never modified.
+fn patched_reference_src(root: &Path, out: &Path) -> PathBuf {
+    let dst = out.join("ref-src");
+    if dst.exists() {
+        fs::remove_dir_all(&dst).unwrap();
+    }
+    copy_dir(&root.join("src"), &dst);
+    let patches = root.join("rust/patches");
+    println!("cargo::rerun-if-changed={}", patches.display());
+    let mut files: Vec<_> = fs::read_dir(&patches)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "patch"))
+        .collect();
+    files.sort();
+    for p in files {
+        println!("cargo::rerun-if-changed={}", p.display());
+        let status = Command::new("patch")
+            .args(["-s", "-p2", "-d"])
+            .arg(&dst)
+            .arg("-i")
+            .arg(&p)
+            .status()
+            .expect("`patch` is required");
+        assert!(status.success(), "failed to apply {}", p.display());
+    }
+    dst
+}
+
+fn copy_dir(from: &Path, to: &Path) {
+    fs::create_dir_all(to).unwrap();
+    for e in fs::read_dir(from).unwrap() {
+        let e = e.unwrap();
+        let target = to.join(e.file_name());
+        if e.file_type().unwrap().is_dir() {
+            copy_dir(&e.path(), &target);
+        } else {
+            fs::copy(e.path(), target).unwrap();
+        }
+    }
+}
+
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let root = manifest.join("../..");
-    let src = root.join("src");
     let include = root.join("include");
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let src = patched_reference_src(&root, &out);
+    let pristine = root.join("src");
     println!("cargo::rerun-if-changed=build.rs");
-    for e in fs::read_dir(&src).unwrap() {
+    for e in fs::read_dir(&pristine).unwrap() {
         println!("cargo::rerun-if-changed={}", e.unwrap().path().display());
     }
     println!(

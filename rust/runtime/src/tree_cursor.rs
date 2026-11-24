@@ -175,6 +175,12 @@ fn length_backtrack(a: Length, b: Length) -> Length {
     }
 }
 
+/// A reverse `child_iterator_next`, taking unsigned underflow into account.
+///
+/// Two upstream 0.26.13 bugs are fixed here, as upstream did later (ADR-013): the underflow test
+/// compared `(int8_t)child_index` with -1, ending the walk at child 255, 511, ... (upstream
+/// 9a15b6afa), and the returned entries lacked `descendant_index`, which was never rewound
+/// (upstream 2cca12dac).
 unsafe extern "C" fn child_iterator_previous(
     this: *mut CursorChildIterator,
     result: *mut TreeCursorEntry,
@@ -182,9 +188,7 @@ unsafe extern "C" fn child_iterator_previous(
 ) -> bool {
     unsafe {
         let s = &mut *this;
-        // A reverse `child_iterator_next`, taking unsigned underflow into account. (The C compares
-        // `(int8_t)child_index` with -1, so an index of 255 also ends the iteration.)
-        if s.parent.ptr.is_null() || (s.child_index as u8 as i8) == -1 {
+        if s.parent.ptr.is_null() || s.child_index == u32::MAX {
             return false;
         }
         let child = ts_subtree_children(s.parent).add(s.child_index as usize);
@@ -193,7 +197,7 @@ unsafe extern "C" fn child_iterator_previous(
             position: s.position,
             child_index: s.child_index,
             structural_child_index: s.structural_child_index,
-            descendant_index: 0,
+            descendant_index: s.descendant_index,
         };
         *visible = ts_subtree_visible(*child);
         let extra = ts_subtree_extra(*child);
@@ -211,6 +215,16 @@ unsafe extern "C" fn child_iterator_previous(
         // Unsigned can underflow, so compare with child_count.
         if s.child_index < (*s.parent.ptr).child_count {
             let previous_child = *ts_subtree_children(s.parent).add(s.child_index as usize);
+            let mut previous_visible = ts_subtree_visible(previous_child);
+            if !ts_subtree_extra(previous_child) && !s.alias_sequence.is_null() {
+                previous_visible |= *s.alias_sequence.add(s.structural_child_index as usize) != 0;
+            }
+            s.descendant_index = s
+                .descendant_index
+                .wrapping_sub(ts_subtree_visible_descendant_count(previous_child));
+            if previous_visible {
+                s.descendant_index = s.descendant_index.wrapping_sub(1);
+            }
             let size = ts_subtree_size(previous_child);
             s.position = length_backtrack(s.position, size);
         }

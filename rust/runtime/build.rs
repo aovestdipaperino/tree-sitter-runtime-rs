@@ -1,7 +1,55 @@
 //! Builds the C units that are not ported yet, each as its own object (ADR-011), with the flags
 //! the upstream `tree-sitter` crate uses. `ported.txt` lists the units whose symbols now come
 //! from Rust.
-use std::{collections::HashSet, env, fs, path::PathBuf};
+use std::{
+    collections::HashSet,
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
+
+/// The reference C sources: upstream 0.26.13 plus the upstream fixes listed in `rust/patches/`
+/// (ADR-013). Copied to `OUT_DIR` and patched there; the pristine `src/` is never modified.
+fn patched_reference_src(root: &Path, out: &Path) -> PathBuf {
+    let dst = out.join("ref-src");
+    if dst.exists() {
+        fs::remove_dir_all(&dst).unwrap();
+    }
+    copy_dir(&root.join("src"), &dst);
+    let patches = root.join("rust/patches");
+    println!("cargo::rerun-if-changed={}", patches.display());
+    let mut files: Vec<_> = fs::read_dir(&patches)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "patch"))
+        .collect();
+    files.sort();
+    for p in files {
+        println!("cargo::rerun-if-changed={}", p.display());
+        let status = Command::new("patch")
+            .args(["-s", "-p2", "-d"])
+            .arg(&dst)
+            .arg("-i")
+            .arg(&p)
+            .status()
+            .expect("`patch` is required");
+        assert!(status.success(), "failed to apply {}", p.display());
+    }
+    dst
+}
+
+fn copy_dir(from: &Path, to: &Path) {
+    fs::create_dir_all(to).unwrap();
+    for e in fs::read_dir(from).unwrap() {
+        let e = e.unwrap();
+        let target = to.join(e.file_name());
+        if e.file_type().unwrap().is_dir() {
+            copy_dir(&e.path(), &target);
+        } else {
+            fs::copy(e.path(), target).unwrap();
+        }
+    }
+}
 
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -59,6 +107,7 @@ fn main() {
     build.compile("tree-sitter-c-units");
 
     // Test shims (layout and header-only helpers); tiny, and dead-stripped from real binaries.
+    let ref_src = patched_reference_src(&root, &PathBuf::from(env::var("OUT_DIR").unwrap()));
     let shim = manifest.join("shim");
     for e in fs::read_dir(&shim).unwrap() {
         println!("cargo::rerun-if-changed={}", e.unwrap().path().display());
@@ -66,14 +115,14 @@ fn main() {
     cc::Build::new()
         .cargo_metadata(false)
         .std("c11")
-        .include(&src)
+        .include(&ref_src)
         .include(&include)
         .warnings(false)
         .file(shim.join("helpers.c"))
         .file(shim.join("layout.c"))
         // The C original of each ported unit, symbols renamed, as a reference for tests.
         .define("ts_point_edit", "shim_c_ts_point_edit")
-        .file(src.join("point.c"))
+        .file(ref_src.join("point.c"))
         .define("ts_set_allocator", "c_ref_ts_set_allocator")
         .define("ts_current_malloc", "c_ref_current_malloc")
         .define("ts_current_calloc", "c_ref_current_calloc")
@@ -91,7 +140,7 @@ fn main() {
             "c_ref_lexer_set_included_ranges",
         )
         .define("ts_lexer_included_ranges", "c_ref_lexer_included_ranges")
-        .file(src.join("lexer.c"))
+        .file(ref_src.join("lexer.c"))
         .define("ts_language_copy", "c_ref_language_copy")
         .define("ts_language_delete", "c_ref_language_delete")
         .define("ts_language_symbol_count", "c_ref_language_symbol_count")
@@ -160,7 +209,7 @@ fn main() {
             "ts_lookahead_iterator_current_symbol_name",
             "c_ref_lookahead_iterator_current_symbol_name",
         )
-        .file(src.join("language.c"))
+        .file(ref_src.join("language.c"))
         .file(shim.join("lang_ref.c"))
         .define(
             "ts_external_scanner_state_init",
@@ -229,7 +278,7 @@ fn main() {
             "ts_subtree_external_scanner_state_eq",
             "c_ref_subtree_external_scanner_state_eq",
         )
-        .file(src.join("subtree.c"))
+        .file(ref_src.join("subtree.c"))
         .file(shim.join("subtree_shim.c"))
         .define("ts_stack_new", "c_ref_stack_new")
         .define("ts_stack_delete", "c_ref_stack_delete")
@@ -282,7 +331,7 @@ fn main() {
         .define("ts_stack_remove_version", "c_ref_stack_remove_version")
         .define("ts_stack_clear", "c_ref_stack_clear")
         .define("ts_stack_print_dot_graph", "c_ref_stack_print_dot_graph")
-        .file(src.join("stack.c"))
+        .file(ref_src.join("stack.c"))
         .define("ts_tree_new", "c_ref_tree_new")
         .define("ts_tree_copy", "c_ref_tree_copy")
         .define("ts_tree_delete", "c_ref_tree_delete")
@@ -300,7 +349,7 @@ fn main() {
         )
         .define("ts_tree_print_dot_graph", "c_ref_tree_print_dot_graph")
         .define("_ts_dup", "c_ref__ts_dup")
-        .file(src.join("tree.c"))
+        .file(ref_src.join("tree.c"))
         .define("ts_tree_cursor_new", "c_ref_tree_cursor_new")
         .define("ts_tree_cursor_reset", "c_ref_tree_cursor_reset")
         .define("ts_tree_cursor_init", "c_ref_tree_cursor_init")
@@ -387,7 +436,7 @@ fn main() {
         )
         .define("ts_tree_cursor_copy", "c_ref_tree_cursor_copy")
         .define("ts_tree_cursor_reset_to", "c_ref_tree_cursor_reset_to")
-        .file(src.join("tree_cursor.c"))
+        .file(ref_src.join("tree_cursor.c"))
         .define(
             "ts_range_array_get_changed_ranges",
             "c_ref_range_array_get_changed_ranges",
@@ -398,9 +447,9 @@ fn main() {
             "ts_subtree_get_changed_ranges",
             "c_ref_subtree_get_changed_ranges",
         )
-        .file(src.join("get_changed_ranges.c"))
+        .file(ref_src.join("get_changed_ranges.c"))
         .file(shim.join("alloc_ref.c"))
-        .file(src.join("alloc.c"))
+        .file(ref_src.join("alloc.c"))
         .compile("tree-sitter-shim");
     // Linked straight into each final binary rather than bundled into the rlib, so that shim
     // objects never end up in the shipped static library.

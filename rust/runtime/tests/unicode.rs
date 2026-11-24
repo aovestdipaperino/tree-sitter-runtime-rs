@@ -101,20 +101,27 @@ fn utf16_le_matches_c() {
 }
 
 #[test]
-fn utf16_be_matches_c_including_the_host_order_quirk() {
+fn utf16_be_matches_c() {
     check_utf16(decode_utf16_be, shim_decode_utf16_be, u16::to_be_bytes);
 }
 
+/// Upstream 0.26.13 misdecoded UTF-16 BE surrogate pairs on little-endian hosts (it read the trail
+/// unit without byte-swapping); fixed upstream in #5912 and here (rust/patches, ADR-013). Checked
+/// against Rust's own UTF-16 encoder, independently of the C.
 #[test]
-fn utf16_be_quirk_is_real_on_little_endian_hosts() {
-    // D83D DE00 is U+1F600 in UTF-16 BE; the C does not recognise the pair on a little-endian host.
-    let bytes = [0xd8, 0x3d, 0xde, 0x00];
-    let (used, cp) = decode_utf16_be(&bytes);
-    if cfg!(target_endian = "little") {
-        assert_eq!((used, cp), (2, 0xd83d));
-    } else {
-        assert_eq!((used, cp), (4, 0x1f600));
+fn utf16_surrogate_pairs_decode_in_both_byte_orders() {
+    for cp in (0x10000u32..=0x10ffff)
+        .step_by(7)
+        .chain([0x1f600, 0x10000, 0x10ffff])
+    {
+        let ch = char::from_u32(cp).unwrap();
+        let mut units = [0u16; 2];
+        ch.encode_utf16(&mut units);
+        let le: Vec<u8> = units.iter().flat_map(|u| u.to_le_bytes()).collect();
+        let be: Vec<u8> = units.iter().flat_map(|u| u.to_be_bytes()).collect();
+        assert_eq!(decode_utf16_le(&le), (4, cp as i32));
+        assert_eq!(decode_utf16_be(&be), (4, cp as i32));
+        assert_eq!(c(shim_decode_utf16_le, &le), (4, cp as i32));
+        assert_eq!(c(shim_decode_utf16_be, &be), (4, cp as i32));
     }
-    assert_eq!((used, cp), c(shim_decode_utf16_be, &bytes));
-    assert_eq!(decode_utf16_le(&[0x3d, 0xd8, 0x00, 0xde]), (4, 0x1f600));
 }

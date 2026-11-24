@@ -97,13 +97,21 @@ after every unit.
 Consequences: layout drift is caught by the layout test, not by crashes. Confirm or veto.
 
 ## Known upstream quirks reproduced on purpose (ADR-004)
-- `U16_NEXT_BE` in `src/unicode.h` reads the trail unit of a surrogate pair in host byte order
-  without `be16toh`. On a little-endian host a UTF-16 BE surrogate pair is therefore usually not
-  recognised and decodes as a lone lead surrogate. `unicode.rs` does the same, and
-  `tests/unicode.rs` pins it. Worth reporting upstream; the fix would change trees, so it needs a
-  decision of its own.
 - `ts_assert` stays on in release builds (the C build never defines `NDEBUG`); `ts_assert!` is a
   plain `assert!`. A failed assertion aborts with a Rust panic message instead of glibc's.
+- Bugs that upstream has since fixed are not reproduced; see ADR-013.
+
+## ADR-013: oracle is 0.26.13 plus listed upstream fixes
+Status: accepted (2026-11-24, on the instruction "fix evident bugs on rust side")
+Amends ADR-004. Three evident bugs in 0.26.13 are fixed upstream (v0.27.x): UTF-16 surrogate trail
+byte order (`unicode.h`), `(int8_t)child_index == -1` in the reverse cursor iterator, and the
+reverse iterator dropping `descendant_index` (`tree_cursor.c`). The Rust port fixes them. The
+reference C is pristine `src/` copied to `OUT_DIR/ref-src` and patched with `rust/patches/*.patch`
+(`patch -p2`); pristine `src/` is never modified. Both `runtime/build.rs` and `harness/build.rs`
+use the patched copy, so exact equality with the oracle still holds. Further post-0.26.13 fixes
+(`_compare_int` overflow, `repeat_depth` width, `ts_language_symbol_for_name` prefix match, null
+memcpy in `array_assign`, embedded-NUL symbol names, skipped-character error cost) are candidates
+for the same mechanism or for rebasing to v0.27.2; undecided.
 
 ## ADR-012: variadic `TSLexer.log` stays C
 Status: accepted (2026-11-24, by necessity)
