@@ -325,8 +325,8 @@ fn lookahead_iterators_match_c() {
                 c_lookaheads(l, s, &mut b);
                 assert_eq!(it_state(&a), it_state(&b), "{name} init {s}");
                 assert_eq!(
-                    (a.language, a.group_end, a.state, a.section_index),
-                    (b.language, b.group_end, b.state, b.section_index),
+                    (a.language, a.group_end, a.phase),
+                    (b.language, b.group_end, b.phase),
                     "{name} init fields {s}"
                 );
                 let mut n = 0;

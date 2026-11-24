@@ -101,17 +101,20 @@ Consequences: layout drift is caught by the layout test, not by crashes. Confirm
   plain `assert!`. A failed assertion aborts with a Rust panic message instead of glibc's.
 - Bugs that upstream has since fixed are not reproduced; see ADR-013.
 
-## ADR-013: oracle is 0.26.13 plus listed upstream fixes
-Status: accepted (2026-11-24, on the instruction "fix evident bugs on rust side")
-Amends ADR-004. Three evident bugs in 0.26.13 are fixed upstream (v0.27.x): UTF-16 surrogate trail
-byte order (`unicode.h`), `(int8_t)child_index == -1` in the reverse cursor iterator, and the
-reverse iterator dropping `descendant_index` (`tree_cursor.c`). The Rust port fixes them. The
-reference C is pristine `src/` copied to `OUT_DIR/ref-src` and patched with `rust/patches/*.patch`
-(`patch -p2`); pristine `src/` is never modified. Both `runtime/build.rs` and `harness/build.rs`
-use the patched copy, so exact equality with the oracle still holds. Further post-0.26.13 fixes
-(`_compare_int` overflow, `repeat_depth` width, `ts_language_symbol_for_name` prefix match, null
-memcpy in `array_assign`, embedded-NUL symbol names, skipped-character error cost) are candidates
-for the same mechanism or for rebasing to v0.27.2; undecided.
+## ADR-013: oracle is upstream v0.27.2 plus listed patches
+Status: accepted (2026-11-24, user: "go with recommendations"); supersedes ADR-001's 0.26.13 target
+The vendored `src/` and `include/` are upstream v0.27.2 (3fb7be4). The three 0.26.13 bugs found
+by the port (UTF-16 surrogate trail byte order, reverse cursor `int8_t` child index, reverse
+cursor `descendant_index`) are fixed upstream in this version, so the Rust port simply matches it.
+The reference C is pristine `src/` copied to `OUT_DIR/ref-src` and patched with
+`rust/patches/*.patch` (`patch -p2`); pristine `src/` is never modified. Current patches:
+- `0001-subtree-string-hidden-root`: v0.27.2's iterative `ts_subtree__write_to_string` prints
+  `__ROOT__: ` before the children of a hidden root (a bug; the recursive version did not). The
+  patch restores the old behaviour; the Rust port follows the patched oracle. Still present on
+  upstream master (f0090e1); only reachable through `ts_node_string` on an anonymous node that has
+  children, so it is not reported until a public-API reproduction exists.
+Newer upstream commits on master (e.g. `Length` field order, error cost for skipped characters)
+are not in this baseline.
 
 ## ADR-012: variadic `TSLexer.log` stays C
 Status: accepted (2026-11-24, by necessity)

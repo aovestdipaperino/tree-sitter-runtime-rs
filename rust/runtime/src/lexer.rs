@@ -179,6 +179,16 @@ impl Lexer {
         }
 
         let mut chunk = (self.chunk as *const u8).wrapping_add(position_in_chunk as usize);
+
+        // ASCII fast path.
+        // SAFETY: `size > 0`, so the first byte of the chunk at the position is readable.
+        let first = unsafe { *chunk };
+        if self.input.encoding == TSInputEncodingUTF8 && first < 0x80 {
+            self.data.lookahead = i32::from(first);
+            self.lookahead_size = 1;
+            return;
+        }
+
         let mut cp = self.data.lookahead;
         // SAFETY: see `decode`.
         self.lookahead_size = unsafe { self.decode(chunk, size, &mut cp) };
@@ -373,6 +383,38 @@ unsafe extern "C" fn lexer_advance(this: *mut TSLexer, skip: bool) {
     }
     let c = lexer.data.lookahead;
     lexer.log_character(if skip { "skip" } else { "consume" }, c);
+
+    // ASCII fast path: stay inside the current chunk and included range.
+    let next_position = lexer.current_position.bytes.wrapping_add(1);
+    // SAFETY: `current_included_range_index < included_range_count` whenever a chunk is set.
+    let current_range_end = unsafe {
+        (*lexer
+            .included_ranges
+            .add(lexer.current_included_range_index as usize))
+        .end_byte
+    };
+    if lexer.input.encoding == TSInputEncodingUTF8
+        && lexer.lookahead_size == 1
+        && c != i32::from(b'\n')
+        && next_position < current_range_end
+        && next_position < lexer.chunk_start.wrapping_add(lexer.chunk_size)
+    {
+        // SAFETY: the position is inside the current chunk (checked above).
+        let next_byte = unsafe {
+            *(lexer.chunk as *const u8).add(next_position.wrapping_sub(lexer.chunk_start) as usize)
+        };
+        if next_byte < 0x80 {
+            lexer.increment_column_data();
+            lexer.current_position.bytes = next_position;
+            lexer.current_position.extent.column =
+                lexer.current_position.extent.column.wrapping_add(1);
+            if skip {
+                lexer.token_start_position = lexer.current_position;
+            }
+            lexer.data.lookahead = i32::from(next_byte);
+            return;
+        }
+    }
     // SAFETY: chunk is set.
     unsafe { lexer.do_advance(skip) };
 }

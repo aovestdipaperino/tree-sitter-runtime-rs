@@ -46,7 +46,7 @@ pub struct ExternalScannerState {
 // ---- Inline subtree data (8 bytes of bitfields) ----
 
 /// Bit layout (little endian): is_inline:0 visible:1 named:2 extra:3 has_changes:4 is_missing:5
-/// is_keyword:6, symbol:8..16, parse_state:16..32, padding_columns:32..40, padding_rows:40..44,
+/// is_keyword:6 depends_on_column:7, symbol:8..16, parse_state:16..32, padding_columns:32..40, padding_rows:40..44,
 /// lookahead_bytes:44..48, padding_bytes:48..56, size_bytes:56..64.
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -86,6 +86,7 @@ impl SubtreeInlineData {
     bit!(has_changes, set_has_changes, 4);
     bit!(is_missing, set_is_missing, 5);
     bit!(is_keyword, set_is_keyword, 6);
+    bit!(depends_on_column, set_depends_on_column, 7);
     field!(symbol, set_symbol, 8, 8, u8);
     field!(parse_state, set_parse_state, 16, 16, u16);
     field!(padding_columns, set_padding_columns, 32, 8, u8);
@@ -502,7 +503,13 @@ pub fn ts_subtree_has_external_scanner_state_change(s: Subtree) -> bool {
 }
 pub fn ts_subtree_depends_on_column(s: Subtree) -> bool {
     // SAFETY: the active union arm is selected by the inline bit; heap pointers are valid.
-    unsafe { !s.data.is_inline() && (*s.ptr).depends_on_column() }
+    unsafe {
+        if s.data.is_inline() {
+            s.data.depends_on_column()
+        } else {
+            (*s.ptr).depends_on_column()
+        }
+    }
 }
 pub fn ts_subtree_is_fragile(s: Subtree) -> bool {
     // SAFETY: the active union arm is selected by the inline bit; heap pointers are valid.
@@ -769,6 +776,7 @@ pub unsafe extern "C" fn ts_subtree_new_leaf(
             d.set_has_changes(false);
             d.set_is_missing(false);
             d.set_is_keyword(is_keyword);
+            d.set_depends_on_column(depends_on_column);
             d.set_is_inline(true);
             Subtree { data: d }
         } else {
@@ -986,7 +994,7 @@ pub unsafe extern "C" fn ts_subtree_summarize_children(
         for i in 0..p.child_count {
             let child = *children.add(i as usize);
 
-            if p.size.extent.row == 0 && ts_subtree_depends_on_column(child) {
+            if (i == 0 || p.size.extent.row == 0) && ts_subtree_depends_on_column(child) {
                 p.set_depends_on_column(true);
             }
 
@@ -1192,6 +1200,7 @@ pub unsafe extern "C" fn ts_subtree_new_error_node(
 pub unsafe extern "C" fn ts_subtree_new_missing_leaf(
     pool: *mut SubtreePool,
     symbol: TSSymbol,
+    state: TSStateId,
     padding: Length,
     lookahead_bytes: u32,
     language: *const TSLanguage,
@@ -1203,7 +1212,7 @@ pub unsafe extern "C" fn ts_subtree_new_missing_leaf(
             padding,
             length_zero(),
             lookahead_bytes,
-            0,
+            state,
             false,
             false,
             false,
@@ -1432,7 +1441,7 @@ pub unsafe extern "C" fn ts_subtree_edit(
                     value.set_fragile_right(false);
                     value.set_has_changes(false);
                     value.set_has_external_tokens(false);
-                    value.set_depends_on_column(false);
+                    value.set_depends_on_column(result.data.depends_on_column());
                     value.set_is_missing(result.data.is_missing());
                     value.set_is_keyword(result.data.is_keyword());
                     ptr::write(data, value);

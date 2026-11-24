@@ -1,0 +1,12 @@
+--- a/src/subtree.c	2026-11-24 23:33:07
++++ b/src/subtree.c	2026-11-24 23:33:07
+@@ -969,6 +969,9 @@
+         child_frame.alias_symbol = subtree_alias_symbol;
+         child_frame.alias_is_named = subtree_alias_is_named;
+         child_frame.field_name = child_field_name;
++        // A hidden root hands the sentinel down; its children are then roots too (as before the
++        // iterative rewrite), so they get no leading space and no `__ROOT__:` prefix.
++        child_frame.is_root = child_field_name == ROOT_FIELD;
+         frame->structural_child_index++;
+       }
+ 

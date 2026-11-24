@@ -20,6 +20,7 @@ pub const TS_PARSE_ACTION_TYPE_RECOVER: u8 = 3;
 
 unsafe extern "C" {
     fn strncmp(a: *const c_char, b: *const c_char, n: usize) -> c_int;
+    fn strlen(s: *const c_char) -> usize;
     // Defined by `wasm_store.c` (no-wasm stubs, or the real thing with the `wasm` feature).
     fn ts_language_is_wasm(this: *const TSLanguage) -> bool;
     fn ts_wasm_language_retain(this: *const TSLanguage);
@@ -39,16 +40,20 @@ pub struct LookaheadIterator {
     pub language: *const TSLanguage,
     pub data: *const u16,
     pub group_end: *const u16,
-    pub state: TSStateId,
     pub table_value: u16,
-    pub section_index: u16,
     pub group_count: u16,
     pub is_small_state: bool,
+    /// C `LookaheadPhase` enum (an `int`): 0 fresh, 1 positioned, 2 done.
+    pub phase: u32,
     pub actions: *const TSParseAction,
     pub symbol: TSSymbol,
     pub next_state: TSStateId,
     pub action_count: u16,
 }
+
+pub const LOOKAHEAD_FRESH: u32 = 0;
+pub const LOOKAHEAD_POSITIONED: u32 = 1;
+pub const LOOKAHEAD_DONE: u32 = 2;
 
 // ---- Inline helpers of language.h ----
 
@@ -148,18 +153,16 @@ pub unsafe fn ts_language_lookaheads(
         } else {
             data = l
                 .parse_table
-                .wrapping_add(u32::from(state).wrapping_mul(l.symbol_count) as usize)
-                .wrapping_sub(1);
+                .wrapping_add(u32::from(state).wrapping_mul(l.symbol_count) as usize);
         }
         LookaheadIterator {
             language: this,
             data,
             group_end,
-            state: 0,
             table_value: 0,
-            section_index: 0,
             group_count,
             is_small_state,
+            phase: LOOKAHEAD_FRESH,
             actions: ptr::null(),
             symbol: u16::MAX,
             next_state: 0,
@@ -172,10 +175,14 @@ pub unsafe fn ts_language_lookaheads(
 pub unsafe fn ts_lookahead_iterator_next_inner(it: *mut LookaheadIterator) -> bool {
     unsafe {
         let s = &mut *it;
+        if s.phase == LOOKAHEAD_DONE {
+            return false;
+        }
         if s.is_small_state {
             s.data = s.data.add(1);
             if s.data == s.group_end {
                 if s.group_count == 0 {
+                    s.phase = LOOKAHEAD_DONE;
                     return false;
                 }
                 s.group_count -= 1;
@@ -187,20 +194,26 @@ pub unsafe fn ts_lookahead_iterator_next_inner(it: *mut LookaheadIterator) -> bo
                 s.symbol = *s.data;
             } else {
                 s.symbol = *s.data;
+                s.phase = LOOKAHEAD_POSITIONED;
                 return true;
             }
         } else {
-            loop {
-                s.data = s.data.add(1);
-                s.symbol = s.symbol.wrapping_add(1);
-                if u32::from(s.symbol) >= (*s.language).symbol_count {
-                    return false;
-                }
-                s.table_value = *s.data;
-                if s.table_value != 0 {
-                    break;
-                }
+            let row = s.data;
+            let mut symbol: TSSymbol = if s.phase == LOOKAHEAD_FRESH {
+                0
+            } else {
+                s.symbol.wrapping_add(1)
+            };
+            let count = (*s.language).symbol_count;
+            while u32::from(symbol) < count && *row.add(usize::from(symbol)) == 0 {
+                symbol = symbol.wrapping_add(1);
             }
+            if u32::from(symbol) >= count {
+                s.phase = LOOKAHEAD_DONE;
+                return false;
+            }
+            s.symbol = symbol;
+            s.table_value = *row.add(usize::from(symbol));
         }
 
         // Terminal or non-terminal: the table value is either an actions index or a successor state.
@@ -213,6 +226,7 @@ pub unsafe fn ts_lookahead_iterator_next_inner(it: *mut LookaheadIterator) -> bo
             s.action_count = 0;
             s.next_state = s.table_value;
         }
+        s.phase = LOOKAHEAD_POSITIONED;
         true
     }
 }
@@ -351,6 +365,20 @@ pub unsafe extern "C" fn ts_language_delete(this: *const TSLanguage) {
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn ts_language_is_parseable(this: *const TSLanguage) -> bool {
+    // SAFETY: a non-null language pointer refers to a valid `TSLanguage`.
+    unsafe { !this.is_null() && (*this).lex_fn.is_some() }
+}
+
+/// Only differs from `ts_language_copy` when compiled to WebAssembly (not supported here).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ts_language_copy_without_callbacks(
+    this: *const TSLanguage,
+) -> *const TSLanguage {
+    unsafe { ts_language_copy(this) }
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn ts_language_symbol_count(this: *const TSLanguage) -> u32 {
     unsafe { (*this).symbol_count.wrapping_add((*this).alias_count) }
 }
@@ -384,6 +412,7 @@ pub unsafe extern "C" fn ts_language_subtypes(
 ) -> *const TSSymbol {
     unsafe {
         if (*this).abi_version < LANGUAGE_VERSION_WITH_RESERVED_WORDS
+            || u32::from(supertype) >= ts_language_symbol_count(this)
             || !ts_language_symbol_metadata(this, supertype).supertype
         {
             *length = 0;
@@ -542,7 +571,11 @@ pub unsafe extern "C" fn ts_language_next_state(
     symbol: TSSymbol,
 ) -> TSStateId {
     unsafe {
-        if symbol == ts_builtin_sym_error || symbol == ts_builtin_sym_error_repeat {
+        if symbol == ts_builtin_sym_error
+            || symbol == ts_builtin_sym_error_repeat
+            || u32::from(symbol) >= (*this).symbol_count
+            || u32::from(state) >= (*this).state_count
+        {
             0
         } else if u32::from(symbol) < (*this).token_count {
             let mut count = 0u32;
@@ -590,7 +623,7 @@ pub unsafe extern "C" fn ts_language_symbol_for_name(
     is_named: bool,
 ) -> TSSymbol {
     unsafe {
-        if is_named && strncmp(string, c"ERROR".as_ptr(), length as usize) == 0 {
+        if is_named && length == 5 && strncmp(string, c"ERROR".as_ptr(), length as usize) == 0 {
             return ts_builtin_sym_error;
         }
         let count = ts_language_symbol_count(this) as u16;
@@ -603,7 +636,7 @@ pub unsafe extern "C" fn ts_language_symbol_for_name(
             }
             let symbol_name = *(*this).symbol_names.add(usize::from(i));
             if strncmp(symbol_name, string, length as usize) == 0
-                && *symbol_name.add(length as usize) == 0
+                && strlen(symbol_name) == length as usize
             {
                 return *(*this).public_symbol_map.add(usize::from(i));
             }
@@ -684,14 +717,23 @@ pub unsafe extern "C" fn ts_lookahead_iterator_new(
             return ptr::null_mut();
         }
         let iterator = ts_malloc(size_of::<LookaheadIterator>()) as *mut LookaheadIterator;
-        ptr::write(iterator, ts_language_lookaheads(this, state));
+        ptr::write(
+            iterator,
+            ts_language_lookaheads(ts_language_copy(this), state),
+        );
         iterator as *mut TSLookaheadIterator
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn ts_lookahead_iterator_delete(this: *mut TSLookaheadIterator) {
-    unsafe { ts_free(this as *mut c_void) }
+    unsafe {
+        if this.is_null() {
+            return;
+        }
+        ts_language_delete((*(this as *mut LookaheadIterator)).language);
+        ts_free(this as *mut c_void)
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -726,7 +768,10 @@ pub unsafe extern "C" fn ts_lookahead_iterator_reset(
         if u32::from(state) >= (*language).state_count {
             return false;
         }
-        *(this as *mut LookaheadIterator) = ts_language_lookaheads(language, state);
+        let iterator = this as *mut LookaheadIterator;
+        let previous = (*iterator).language;
+        *iterator = ts_language_lookaheads(ts_language_copy(language), state);
+        ts_language_delete(previous);
         true
     }
 }
@@ -749,6 +794,9 @@ pub unsafe extern "C" fn ts_lookahead_iterator_current_symbol_name(
 ) -> *const c_char {
     unsafe {
         let iterator = &*(this as *const LookaheadIterator);
+        if iterator.phase != LOOKAHEAD_POSITIONED {
+            return ptr::null();
+        }
         ts_language_symbol_name(iterator.language, iterator.symbol)
     }
 }

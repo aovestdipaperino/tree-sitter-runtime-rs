@@ -83,6 +83,7 @@ unsafe extern "C" {
     fn c_ref_subtree_new_missing_leaf(
         p: *mut SubtreePool,
         sym: u16,
+        st: u16,
         pad: Length,
         la: u32,
         l: *const TSLanguage,
@@ -297,8 +298,8 @@ fn random_scripts_match_c() {
                         let kind = rng.below(6);
                         let (a, b) = match kind {
                             0 => (
-                                ts_subtree_new_missing_leaf(&mut r.pool, sym, pad, la, lang),
-                                c_ref_subtree_new_missing_leaf(&mut c.pool, sym, pad, la, lang),
+                                ts_subtree_new_missing_leaf(&mut r.pool, sym, st, pad, la, lang),
+                                c_ref_subtree_new_missing_leaf(&mut c.pool, sym, st, pad, la, lang),
                             ),
                             1 => {
                                 let ch =
