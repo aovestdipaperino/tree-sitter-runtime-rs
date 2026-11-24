@@ -308,10 +308,4 @@ fn tree_operations_match_c() {
         c_ref_tree_delete(std::ptr::null_mut());
     }
     assert!(edits_done >= 100);
-    let _ = (
-        ts_language_abi_version as unsafe extern "C" fn(*const TSLanguage) -> u32,
-        Subtree {
-            ptr: std::ptr::null(),
-        },
-    );
 }
