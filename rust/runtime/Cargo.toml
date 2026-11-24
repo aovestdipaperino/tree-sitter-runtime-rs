@@ -1,0 +1,15 @@
+[package]
+name = "tree-sitter-runtime-rs"
+version = "0.0.0"
+authors = ["Enzo Lombardi <enzinol@gmail.com>"]
+edition = "2024"
+description = "The tree-sitter runtime, ported from C to Rust (work in progress)"
+license = "MIT"
+repository = "https://github.com/aovestdipaperino/tree-sitter-runtime-rs"
+publish = false
+
+[lib]
+crate-type = ["rlib", "staticlib"]
+
+[build-dependencies]
+cc = "1"

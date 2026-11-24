@@ -1,0 +1,6 @@
+# C units already ported to Rust, one file name per line (relative to src/). The build compiles
+# every other .c file separately and links it with the Rust units, which export the same symbols.
+# wasm_store.c is built as C: without the `wasm` feature it is only ~100 lines of dummy functions
+# (ADR-003); they become a small Rust stub unit at the end.
+point.c
+alloc.c
