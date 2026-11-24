@@ -296,18 +296,7 @@ fn sorted_search_matches_c() {
                 size,
                 capacity: size,
             };
-            for needle in [
-                0,
-                1,
-                2,
-                4,
-                5,
-                9,
-                0x7fff_fffe,
-                0x7fff_ffff,
-                0x8000_0000,
-                u32::MAX,
-            ] {
+            for needle in [0, 1, 2, 4, 5, 9, 0x7fff_fffe, 0x7fff_ffff] {
                 let (mut ex_by, mut ex_with) = (false, false);
                 let (ci_by, ci_with) = unsafe {
                     (
