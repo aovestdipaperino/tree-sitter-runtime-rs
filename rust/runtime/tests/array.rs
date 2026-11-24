@@ -284,11 +284,10 @@ fn sorted_search_matches_c() {
     let mut rng = Rng(0xabcdef);
     for size in 0..40u32 {
         for _ in 0..30 {
-            // Sorted, possibly with duplicates, including huge keys (the C casts to int).
+            // Sorted, possibly with duplicates. Keys stay below 2^31: the C compares `(int)a - (int)b`,
+            // which overflows (undefined behaviour, optimiser-dependent) beyond that.
             let mut keys: Vec<u32> = (0..size)
-                .map(|_| {
-                    [0, 1, 2, 3, 5, 8, 0x7fff_ffff, 0x8000_0000, u32::MAX][rng.below(9) as usize]
-                })
+                .map(|_| [0, 1, 2, 3, 5, 8, 0x7fff_ffff][rng.below(7) as usize])
                 .collect();
             keys.sort_unstable();
             let elems: Vec<Sort> = keys.iter().map(|&k| Sort { key: k, tag: 0 }).collect();

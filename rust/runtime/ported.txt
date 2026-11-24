@@ -4,3 +4,4 @@
 # (ADR-003); they become a small Rust stub unit at the end.
 point.c
 alloc.c
+lexer.c

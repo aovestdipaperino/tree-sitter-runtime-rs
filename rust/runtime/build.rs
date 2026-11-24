@@ -49,6 +49,13 @@ fn main() {
             entry.unwrap().path().display()
         );
     }
+    // C that has no Rust form yet (variadic functions): see c/lexer_log.c.
+    let extra = manifest.join("c");
+    for e in fs::read_dir(&extra).unwrap() {
+        let p = e.unwrap().path();
+        println!("cargo::rerun-if-changed={}", p.display());
+        build.file(p);
+    }
     build.compile("tree-sitter-c-units");
 
     // Test shims (layout and header-only helpers); tiny, and dead-stripped from real binaries.
@@ -57,6 +64,7 @@ fn main() {
         println!("cargo::rerun-if-changed={}", e.unwrap().path().display());
     }
     cc::Build::new()
+        .cargo_metadata(false)
         .std("c11")
         .include(&src)
         .include(&include)
@@ -71,7 +79,27 @@ fn main() {
         .define("ts_current_calloc", "c_ref_current_calloc")
         .define("ts_current_realloc", "c_ref_current_realloc")
         .define("ts_current_free", "c_ref_current_free")
+        .define("ts_lexer_init", "c_ref_lexer_init")
+        .define("ts_lexer_delete", "c_ref_lexer_delete")
+        .define("ts_lexer_set_input", "c_ref_lexer_set_input")
+        .define("ts_lexer_reset", "c_ref_lexer_reset")
+        .define("ts_lexer_start", "c_ref_lexer_start")
+        .define("ts_lexer_finish", "c_ref_lexer_finish")
+        .define("ts_lexer_mark_end", "c_ref_lexer_mark_end")
+        .define(
+            "ts_lexer_set_included_ranges",
+            "c_ref_lexer_set_included_ranges",
+        )
+        .define("ts_lexer_included_ranges", "c_ref_lexer_included_ranges")
+        .file(src.join("lexer.c"))
         .file(shim.join("alloc_ref.c"))
         .file(src.join("alloc.c"))
         .compile("tree-sitter-shim");
+    // Linked straight into each final binary rather than bundled into the rlib, so that shim
+    // objects never end up in the shipped static library.
+    println!(
+        "cargo::rustc-link-search=native={}",
+        env::var("OUT_DIR").unwrap()
+    );
+    println!("cargo::rustc-link-lib=static:-bundle=tree-sitter-shim");
 }

@@ -7,6 +7,8 @@ pub mod api;
 pub mod array;
 pub mod consts;
 pub mod length;
+pub mod lexer;
+pub mod parser_abi;
 pub mod point;
 pub mod reduce_action;
 pub mod unicode;

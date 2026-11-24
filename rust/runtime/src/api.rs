@@ -16,11 +16,7 @@ pub const TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION: u32 = 13;
 pub type TSStateId = u16;
 pub type TSSymbol = u16;
 pub type TSFieldId = u16;
-#[repr(C)]
-#[derive(Debug)]
-pub struct TSLanguage {
-    _unused: [u8; 0],
-}
+pub use crate::parser_abi::TSLanguage;
 #[repr(C)]
 #[derive(Debug)]
 pub struct TSParser {

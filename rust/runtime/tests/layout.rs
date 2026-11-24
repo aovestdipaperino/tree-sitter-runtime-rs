@@ -2,7 +2,7 @@
 use core::mem::{align_of, offset_of, size_of};
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
-use tree_sitter_runtime_rs::{api::*, length::Length, reduce_action::*};
+use tree_sitter_runtime_rs::{api::*, length::Length, lexer::*, parser_abi::*, reduce_action::*};
 
 unsafe extern "C" {
     fn shim_layout_len() -> usize;
@@ -51,6 +51,19 @@ fn rust_layout_equals_c_layout() {
         TSQueryCursorState { payload, current_byte_offset },
         TSQueryCursorOptions { payload, progress_callback },
         Length { bytes, extent },
+        TSLexer { lookahead, result_symbol, advance, mark_end, get_column, is_at_included_range_start, eof, log },
+        Lexer { data, current_position, token_start_position, token_end_position, included_ranges, chunk, input, logger,
+                included_range_count, current_included_range_index, chunk_start, chunk_size, lookahead_size, did_get_column,
+                column_data, debug_buffer },
+        ColumnData {}, TSFieldMapEntry {}, TSMapSlice {}, TSSymbolMetadata {}, TSLexerMode {}, TSCharacterRange {},
+        TSParseAction {}, TSParseActionEntry {},
+        TSLanguage { abi_version, symbol_count, alias_count, token_count, external_token_count, state_count,
+                large_state_count, production_id_count, field_count, max_alias_sequence_length, parse_table,
+                small_parse_table, small_parse_table_map, parse_actions, symbol_names, field_names, field_map_slices,
+                field_map_entries, symbol_metadata, public_symbol_map, alias_map, alias_sequences, lex_modes, lex_fn,
+                keyword_lex_fn, keyword_capture_token, external_scanner, primary_state_ids, name, reserved_words,
+                max_reserved_word_set_size, supertype_count, supertype_symbols, supertype_map_slices,
+                supertype_map_entries, metadata },
         ReduceAction { count, symbol, dynamic_precedence, production_id },
         ReduceActionSet { contents, size, capacity },
         TSLanguageMetadata { major_version, minor_version, patch_version },

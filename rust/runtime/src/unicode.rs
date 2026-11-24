@@ -18,10 +18,9 @@ const LEAD4_T1_BITS: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0x1E, 0x0F, 0x0F, 0x0F,
 
 /// Decodes one UTF-8 code point from the start of `s` (`ts_decode_utf8`).
 ///
-/// `s` must not be empty: the C reads `s[0]` unconditionally, and callers never pass length 0.
+/// An empty `s` is undefined behaviour in the C (it reads `s[0]`); here it reports an error.
 pub fn decode_utf8(s: &[u8]) -> (u32, i32) {
     let length = s.len();
-    debug_assert!(length > 0, "ts_decode_utf8 is never called with length 0");
     if length == 0 {
         return (0, TS_DECODE_ERROR);
     }
