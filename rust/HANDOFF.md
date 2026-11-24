@@ -77,6 +77,14 @@ so a backward walk over a node with more than 255 children stops at child 511/25
 built by hand stops after 87 steps; grammars never produce nodes that flat, since repeats are
 balanced, which is why it is unseen in practice). Pinned by `previous_sibling_walk_over_wide_node_matches_c`.
 
+## get_changed_ranges + reusable_node (checkpoint 3, fifth unit)
+`get_changed_ranges.rs` (range edit, range-array diff, the tree iterator comparison) is compared with the
+renamed C in `tests/ranges.rs` (200k random range edits, 50k range-array diffs) and, at tree level, in
+`tests/tree.rs` (600 edit-reparse-changed-ranges rounds). Mutations in the has-changes check are caught;
+three mutations (error-cost equality, external-token flag, final size comparison) are NOT: the generated
+sources have no external-scanner tokens and few error nodes. `reusable_node.rs` is a header-only port with
+no separate test yet; the parser port exercises it. Note: a mutation making `iterator_descend` use `>=` hangs.
+
 ## Next (rest of checkpoint 3)
 
 `tree_cursor`, `get_changed_ranges`, `parser`, then `node`. Risks to read first in `MAP.md`:

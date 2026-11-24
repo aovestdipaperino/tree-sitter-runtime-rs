@@ -25,6 +25,7 @@ pub struct TreeCursorEntry {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TreeCursor {
     pub tree: *const TSTree,
     pub stack: Array<TreeCursorEntry>,

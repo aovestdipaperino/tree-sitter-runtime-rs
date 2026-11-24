@@ -3,10 +3,13 @@
 use crate::alloc::{ts_calloc, ts_free, ts_malloc};
 use crate::api::*;
 use crate::array::Array;
+use crate::get_changed_ranges::{
+    ts_range_array_get_changed_ranges, ts_range_edit, ts_subtree_get_changed_ranges,
+};
 use crate::language::*;
 use crate::length::*;
 use crate::subtree::*;
-use crate::tree_cursor::TreeCursor;
+use crate::tree_cursor::{TreeCursor, ts_tree_cursor_init};
 use core::ffi::{c_int, c_void};
 use core::ptr;
 
@@ -28,26 +31,6 @@ unsafe extern "C" {
         position: Length,
         alias: TSSymbol,
     ) -> TSNode;
-    // tree_cursor.c
-    fn ts_tree_cursor_init(this: *mut TreeCursor, node: TSNode);
-    // get_changed_ranges.c (`ts_range_edit` has no prototype in the C headers)
-    fn ts_range_edit(range: *mut TSRange, edit: *const TSInputEdit);
-    fn ts_range_array_get_changed_ranges(
-        old_ranges: *const TSRange,
-        old_range_count: u32,
-        new_ranges: *const TSRange,
-        new_range_count: u32,
-        differences: *mut TSRangeArray,
-    );
-    fn ts_subtree_get_changed_ranges(
-        old_tree: *const Subtree,
-        new_tree: *const Subtree,
-        cursor1: *mut TreeCursor,
-        cursor2: *mut TreeCursor,
-        language: *const TSLanguage,
-        included_range_differences: *const TSRangeArray,
-        ranges: *mut *mut TSRange,
-    ) -> u32;
     // libc
     fn dup(fd: c_int) -> c_int;
     fn fdopen(fd: c_int, mode: *const core::ffi::c_char) -> *mut c_void;

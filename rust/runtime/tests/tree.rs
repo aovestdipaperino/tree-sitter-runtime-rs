@@ -183,7 +183,7 @@ fn tree_operations_match_c() {
             assert_eq!(da, db);
 
             // Edits, with a reparse and the changed ranges.
-            for _ in 0..25 {
+            for _ in 0..150 {
                 let start = rng.below(text.len() as u64) as usize;
                 let old_len = rng.below((text.len() - start).min(12) as u64 + 1) as usize;
                 let ins: &[u8] =
@@ -307,5 +307,5 @@ fn tree_operations_match_c() {
         ts_tree_delete(std::ptr::null_mut());
         c_ref_tree_delete(std::ptr::null_mut());
     }
-    assert!(edits_done >= 100);
+    assert!(edits_done >= 500);
 }

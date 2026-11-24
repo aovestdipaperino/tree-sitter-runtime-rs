@@ -388,6 +388,17 @@ fn main() {
         .define("ts_tree_cursor_copy", "c_ref_tree_cursor_copy")
         .define("ts_tree_cursor_reset_to", "c_ref_tree_cursor_reset_to")
         .file(src.join("tree_cursor.c"))
+        .define(
+            "ts_range_array_get_changed_ranges",
+            "c_ref_range_array_get_changed_ranges",
+        )
+        .define("ts_range_array_intersects", "c_ref_range_array_intersects")
+        .define("ts_range_edit", "c_ref_range_edit")
+        .define(
+            "ts_subtree_get_changed_ranges",
+            "c_ref_subtree_get_changed_ranges",
+        )
+        .file(src.join("get_changed_ranges.c"))
         .file(shim.join("alloc_ref.c"))
         .file(src.join("alloc.c"))
         .compile("tree-sitter-shim");
