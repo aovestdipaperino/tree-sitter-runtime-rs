@@ -92,6 +92,76 @@ fn main() {
         )
         .define("ts_lexer_included_ranges", "c_ref_lexer_included_ranges")
         .file(src.join("lexer.c"))
+        .define("ts_language_copy", "c_ref_language_copy")
+        .define("ts_language_delete", "c_ref_language_delete")
+        .define("ts_language_symbol_count", "c_ref_language_symbol_count")
+        .define("ts_language_state_count", "c_ref_language_state_count")
+        .define("ts_language_supertypes", "c_ref_language_supertypes")
+        .define("ts_language_subtypes", "c_ref_language_subtypes")
+        .define("ts_language_abi_version", "c_ref_language_abi_version")
+        .define("ts_language_metadata", "c_ref_language_metadata")
+        .define("ts_language_name", "c_ref_language_name")
+        .define("ts_language_field_count", "c_ref_language_field_count")
+        .define("ts_language_table_entry", "c_ref_language_table_entry")
+        .define(
+            "ts_language_lex_mode_for_state",
+            "c_ref_language_lex_mode_for_state",
+        )
+        .define(
+            "ts_language_is_reserved_word",
+            "c_ref_language_is_reserved_word",
+        )
+        .define(
+            "ts_language_symbol_metadata",
+            "c_ref_language_symbol_metadata",
+        )
+        .define("ts_language_public_symbol", "c_ref_language_public_symbol")
+        .define("ts_language_next_state", "c_ref_language_next_state")
+        .define("ts_language_symbol_name", "c_ref_language_symbol_name")
+        .define(
+            "ts_language_symbol_for_name",
+            "c_ref_language_symbol_for_name",
+        )
+        .define("ts_language_symbol_type", "c_ref_language_symbol_type")
+        .define(
+            "ts_language_field_name_for_id",
+            "c_ref_language_field_name_for_id",
+        )
+        .define(
+            "ts_language_field_id_for_name",
+            "c_ref_language_field_id_for_name",
+        )
+        .define("ts_lookahead_iterator_new", "c_ref_lookahead_iterator_new")
+        .define(
+            "ts_lookahead_iterator_delete",
+            "c_ref_lookahead_iterator_delete",
+        )
+        .define(
+            "ts_lookahead_iterator_reset_state",
+            "c_ref_lookahead_iterator_reset_state",
+        )
+        .define(
+            "ts_lookahead_iterator_language",
+            "c_ref_lookahead_iterator_language",
+        )
+        .define(
+            "ts_lookahead_iterator_reset",
+            "c_ref_lookahead_iterator_reset",
+        )
+        .define(
+            "ts_lookahead_iterator_next",
+            "c_ref_lookahead_iterator_next",
+        )
+        .define(
+            "ts_lookahead_iterator_current_symbol",
+            "c_ref_lookahead_iterator_current_symbol",
+        )
+        .define(
+            "ts_lookahead_iterator_current_symbol_name",
+            "c_ref_lookahead_iterator_current_symbol_name",
+        )
+        .file(src.join("language.c"))
+        .file(shim.join("lang_ref.c"))
         .file(shim.join("alloc_ref.c"))
         .file(src.join("alloc.c"))
         .compile("tree-sitter-shim");

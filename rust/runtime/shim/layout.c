@@ -6,6 +6,7 @@
 #include "length.h"
 #include "reduce_action.h"
 #include "lexer.h"
+#include "language.h"
 #include "parser.h"
 
 typedef struct {
@@ -50,6 +51,11 @@ static const Entry TABLE[] = {
     OFF(TSLanguage, keyword_capture_token), OFF(TSLanguage, external_scanner), OFF(TSLanguage, primary_state_ids), OFF(TSLanguage, name),
     OFF(TSLanguage, reserved_words), OFF(TSLanguage, max_reserved_word_set_size), OFF(TSLanguage, supertype_count), OFF(TSLanguage, supertype_symbols),
     OFF(TSLanguage, supertype_map_slices), OFF(TSLanguage, supertype_map_entries), OFF(TSLanguage, metadata),
+  SZ(TableEntry), OFF(TableEntry, actions), OFF(TableEntry, action_count), OFF(TableEntry, is_reusable),
+  SZ(LookaheadIterator), OFF(LookaheadIterator, language), OFF(LookaheadIterator, data), OFF(LookaheadIterator, group_end),
+    OFF(LookaheadIterator, state), OFF(LookaheadIterator, table_value), OFF(LookaheadIterator, section_index),
+    OFF(LookaheadIterator, group_count), OFF(LookaheadIterator, is_small_state), OFF(LookaheadIterator, actions),
+    OFF(LookaheadIterator, symbol), OFF(LookaheadIterator, next_state), OFF(LookaheadIterator, action_count),
   SZ(Length), OFF(Length, bytes), OFF(Length, extent),
   SZ(TSLanguageMetadata), OFF(TSLanguageMetadata, major_version), OFF(TSLanguageMetadata, minor_version), OFF(TSLanguageMetadata, patch_version),
 };

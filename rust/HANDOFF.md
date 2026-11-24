@@ -1,6 +1,6 @@
 # Handoff: runtime port
 
-State at checkpoint 1 (waves 0 to 3 done). Everything below is committed in this repo.
+State at checkpoint 2 (waves 0 to 3, `lexer.c` and `language.c` done). Everything below is committed in this repo.
 
 ## Done
 Ported to Rust, each with differential tests against the C original (`rust/runtime/tests/`):
@@ -19,8 +19,20 @@ whole-library harness: 7,039 comparisons against the renamed C reference, 0 mism
 Note the harness is weak on `ts_point_edit` boundary cases (a seeded off-by-one there did not change
 any corpus result); the unit test in `tests/helpers.rs` is what pins it.
 
-## Next (wave 4, checkpoints 2 and 3)
-`lexer.c` + `language.c`, then the tangled core as one piece: `subtree`, `stack`, `tree`,
+## Checkpoint 2 additions
+`lexer.c` (Rust; `Lexer` keeps the C layout, shared with the C parser) and `language.c` plus all the
+inline helpers of `language.h` (including the lookahead iterator). `TSLanguage` and the `parser.h`
+types are in `parser_abi.rs`. Differential tests: `tests/lexer.rs` runs 3,000 random operation
+scripts (all four encodings, chunking, included ranges, logging) against the renamed C lexer and
+compares full state after every step; `tests/language.rs` compares every function on every state and
+symbol of the 8 real grammars. Seeded bugs in both are caught.
+The variadic `TSLexer.log` cannot be written in stable Rust, so `runtime/c/lexer_log.c` (15 lines)
+stays C; remove it when `c_variadic` stabilises. Latent C hazard reproduced as is: advancing a lexer
+left at EOF with a non-null chunk (possible after an empty included range) reads one range past
+the array; the test avoids that state.
+
+## Next (checkpoint 3)
+The tangled core as one piece: `subtree`, `stack`, `tree`,
 `tree_cursor`, `get_changed_ranges`, `parser`, then `node`. Risks to read first in `MAP.md`:
 `Subtree` bitfields and low-bit pointer tagging need hand-written accessors with layout tests;
 C and Rust units must share those structs while mixed. `query.c` stays C until the last wave.

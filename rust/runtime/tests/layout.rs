@@ -2,7 +2,9 @@
 use core::mem::{align_of, offset_of, size_of};
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
-use tree_sitter_runtime_rs::{api::*, length::Length, lexer::*, parser_abi::*, reduce_action::*};
+use tree_sitter_runtime_rs::{
+    api::*, language::*, length::Length, lexer::*, parser_abi::*, reduce_action::*,
+};
 
 unsafe extern "C" {
     fn shim_layout_len() -> usize;
@@ -51,6 +53,9 @@ fn rust_layout_equals_c_layout() {
         TSQueryCursorState { payload, current_byte_offset },
         TSQueryCursorOptions { payload, progress_callback },
         Length { bytes, extent },
+        TableEntry { actions, action_count, is_reusable },
+        LookaheadIterator { language, data, group_end, state, table_value, section_index, group_count,
+                is_small_state, actions, symbol, next_state, action_count },
         TSLexer { lookahead, result_symbol, advance, mark_end, get_column, is_at_included_range_start, eof, log },
         Lexer { data, current_position, token_start_position, token_end_position, included_ranges, chunk, input, logger,
                 included_range_count, current_included_range_index, chunk_start, chunk_size, lookahead_size, did_get_column,

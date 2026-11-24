@@ -54,4 +54,6 @@ name = "tree-sitter-runtime-rs"
 version = "0.0.0"
 dependencies = [
  "cc",
+ "tree-sitter-language",
+ "tree-sitter-lite-rs",
 ]

@@ -6,6 +6,7 @@ pub mod alloc;
 pub mod api;
 pub mod array;
 pub mod consts;
+pub mod language;
 pub mod length;
 pub mod lexer;
 pub mod parser_abi;

@@ -104,3 +104,8 @@ Consequences: layout drift is caught by the layout test, not by crashes. Confirm
   decision of its own.
 - `ts_assert` stays on in release builds (the C build never defines `NDEBUG`); `ts_assert!` is a
   plain `assert!`. A failed assertion aborts with a Rust panic message instead of glibc's.
+
+## ADR-012: variadic `TSLexer.log` stays C
+Status: accepted (2026-11-24, by necessity)
+Stable Rust cannot define a C-variadic function, and `TSLexer.log` is one. `runtime/c/lexer_log.c`
+formats the message and calls back into Rust (`ts_lexer_log_emit`). Removing it waits for `c_variadic`.
