@@ -97,6 +97,6 @@ C and Rust units must share those structs while mixed. `query.c` stays C until t
 - No GitHub remote exists for this repo yet; creating a public repo needs a go-ahead.
 
 ## Patched reference (ADR-013)
-Reference C = pristine 0.26.13 + `rust/patches/0001..0003`. Add a fix by adding a patch (generated
+Reference C = pristine v0.27.2 + `rust/patches/*.patch`. Add a fix by adding a patch (generated
 against `src/`, applied with `-p2`) and the matching Rust change; tests then compare to the patched
-oracle. Open question: backport more post-0.26.13 fixes or rebase to v0.27.2.
+oracle. Rebased to v0.27.2 (ADR-013). TODO: Rust `write_to_string` is recursive while upstream is now iterative (deep trees overflow the stack).
