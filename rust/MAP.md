@@ -33,7 +33,7 @@ after each group).
 but required by the core), `src/tree.c` (114), `src/tree_cursor.c` (639), `src/lexer.c` (427),
 `src/language.c` (259), `src/get_changed_ranges.c` (497), `src/reusable_node.h` (81).
 Order inside the wave: lexer, language, subtree, stack, tree, tree_cursor, get_changed_ranges, parser.
-State: `lexer.c`, `language.c`, `subtree.c`, `stack.c`, `tree.c`, `tree_cursor.c`, `get_changed_ranges.c`, `parser.c` and `reusable_node.h` ported (wave 4 done). `node.c`, `query.c` open.
+State: `lexer.c`, `language.c`, `subtree.c`, `stack.c`, `tree.c`, `tree_cursor.c`, `get_changed_ranges.c`, `parser.c`, `node.c` and `reusable_node.h` ported (wave 4 done). `query.c`, lib.c/atomic.h, wasm stubs open.
 
 ### Wave 5
 `src/node.c` (742): open.

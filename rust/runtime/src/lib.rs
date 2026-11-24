@@ -10,6 +10,7 @@ pub mod get_changed_ranges;
 pub mod language;
 pub mod length;
 pub mod lexer;
+pub mod node;
 pub mod parser;
 pub mod parser_abi;
 pub mod point;

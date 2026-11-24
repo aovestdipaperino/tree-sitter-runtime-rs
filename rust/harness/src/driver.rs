@@ -158,6 +158,66 @@ impl Drop for Session {
     }
 }
 
+unsafe fn nd(n: TSNode) -> String {
+    if ts_node_is_null(n) {
+        return "-".to_string();
+    }
+    format!("{}@{}-{}", CStr::from_ptr(ts_node_type(n)).to_string_lossy(), ts_node_start_byte(n), ts_node_end_byte(n))
+}
+
+/// Navigation APIs on one node, as text.
+unsafe fn nav_line(n: TSNode, lang: *const TSLanguage) -> String {
+    let (sb, eb) = (ts_node_start_byte(n), ts_node_end_byte(n));
+    let (sp, ep) = (ts_node_start_point(n), ts_node_end_point(n));
+    let mut s = String::new();
+    let _ = write!(
+        s,
+        "  nav par={} ns={} ps={} nns={} pns={} c0={} nc0={} cl={} fcb={} fncb={} dbr={} ndbr={} dpr={} ndpr={}",
+        nd(ts_node_parent(n)),
+        nd(ts_node_next_sibling(n)),
+        nd(ts_node_prev_sibling(n)),
+        nd(ts_node_next_named_sibling(n)),
+        nd(ts_node_prev_named_sibling(n)),
+        nd(ts_node_child(n, 0)),
+        nd(ts_node_named_child(n, 0)),
+        nd(ts_node_child(n, ts_node_child_count(n).saturating_sub(1))),
+        nd(ts_node_first_child_for_byte(n, sb + 1)),
+        nd(ts_node_first_named_child_for_byte(n, sb + 1)),
+        nd(ts_node_descendant_for_byte_range(n, sb, eb)),
+        nd(ts_node_named_descendant_for_byte_range(n, sb.saturating_add(1).min(eb), eb)),
+        nd(ts_node_descendant_for_point_range(n, sp, ep)),
+        nd(ts_node_named_descendant_for_point_range(n, sp, ep)),
+    );
+    let fields = ts_language_field_count(lang);
+    for f in 1..=fields {
+        let c = ts_node_child_by_field_id(n, f as TSFieldId);
+        if !ts_node_is_null(c) {
+            let _ = write!(s, " f{f}={}", nd(c));
+        }
+    }
+    for i in 0..ts_node_child_count(n).min(4) {
+        let nm = ts_node_field_name_for_child(n, i);
+        if !nm.is_null() {
+            let _ = write!(s, " fnc{i}={}", CStr::from_ptr(nm).to_string_lossy());
+        }
+    }
+    for i in 0..ts_node_named_child_count(n).min(4) {
+        let nm = ts_node_field_name_for_named_child(n, i);
+        if !nm.is_null() {
+            let _ = write!(s, " fnnc{i}={}", CStr::from_ptr(nm).to_string_lossy());
+        }
+    }
+    let by_name = ts_node_child_by_field_name(n, c"body".as_ptr(), 4);
+    let _ = write!(s, " body={}", nd(by_name));
+    let root = ts_tree_root_node(n.tree);
+    let _ = write!(s, " cwd={} eq={}", nd(ts_node_child_with_descendant(root, n)), ts_node_eq(n, n) as u8);
+    let mut m = n;
+    let edit = TSInputEdit { start_byte: sb, old_end_byte: sb, new_end_byte: sb + 3, start_point: sp, old_end_point: sp, new_end_point: TSPoint { row: sp.row, column: sp.column + 3 } };
+    ts_node_edit(&mut m, &edit);
+    let _ = write!(s, " edit={}-{}", ts_node_start_byte(m), ts_node_start_point(m).column);
+    s
+}
+
 unsafe fn dump_tree(tree: *const TSTree) -> String {
     let root = ts_tree_root_node(tree);
     let mut out = String::new();
@@ -168,6 +228,7 @@ unsafe fn dump_tree(tree: *const TSTree) -> String {
 
     let mut cur = ts_tree_cursor_new(root);
     let mut depth = 0usize;
+    let mut count = 0usize;
     'walk: loop {
         let n = ts_tree_cursor_current_node(&cur);
         let f = ts_tree_cursor_current_field_name(&cur);
@@ -198,6 +259,11 @@ unsafe fn dump_tree(tree: *const TSTree) -> String {
             ts_node_descendant_count(n),
             indent = depth * 2,
         );
+        count += 1;
+        if count <= 150 {
+            out.push_str(&nav_line(n, ts_tree_language(tree)));
+            out.push('\n');
+        }
         if ts_tree_cursor_goto_first_child(&mut cur) {
             depth += 1;
             continue;

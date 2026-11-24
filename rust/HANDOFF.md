@@ -95,8 +95,14 @@ difference, tree selection, missing-token insertion, recovery depth, callback op
 the operation-count scaling in `parser_balance_subtree` (needs a very long repetition cancelled
 during balancing).
 
+## node.c (ported, 2026-11-24)
+`runtime/src/node.rs`, same structure as the C including the `goto` loop in `first_child_for_byte`.
+Verified by the harness, whose tree dump now also records, for the first 150 nodes of every parse,
+parent, siblings, children, first-child-for-byte, descendant-for-range (byte and point), every
+field id, field names, `child_with_descendant` and `ts_node_edit`. 10 of 10 seeded mutations caught.
+
 ## Next
-`node.c`, then `query.c` (last), lib.c/atomic.h/wasm stubs; then the binding fork and tokensave test.
+`query.c` (last; 4,000+ lines), lib.c/atomic.h/wasm stubs; then the binding fork and tokensave test.
 
 ## Open questions for the user
 - None open. ADR-011 and the v0.27.2 baseline were confirmed; the repo is public.
