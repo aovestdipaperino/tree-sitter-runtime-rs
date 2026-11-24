@@ -65,6 +65,18 @@ scripts that push null subtrees. `stack.c` is now dropped from the C build.
 trees from the real parser: copy and ref counts, edits (also with included ranges), reparse and
 changed ranges for 100 random edits, root node offsets, dot-graph output. Three seeded mutations caught.
 
+## Tree cursor (checkpoint 3, fourth unit)
+`tree_cursor.rs`: the whole cursor API plus the internal step functions and `current_status` (used by
+queries). `tests/tree_cursor.rs`: 300 random walks per grammar over real parse trees of 8 grammars
+(first/last child, next/previous sibling, parent, goto_descendant, first_child_for_byte/point, copy,
+reset_to, reset) comparing the full cursor stack, current node, parent node, depth, descendant index,
+field id/name and status after every step. Seeded mutations in sibling stop condition, alias
+visibility, status walk, byte/point goal and previous-sibling position restore are caught.
+Upstream bug reproduced on purpose: `child_iterator_previous` compares `(int8_t)child_index` with -1,
+so a backward walk over a node with more than 255 children stops at child 511/255 (a 600-child node
+built by hand stops after 87 steps; grammars never produce nodes that flat, since repeats are
+balanced, which is why it is unseen in practice). Pinned by `previous_sibling_walk_over_wide_node_matches_c`.
+
 ## Next (rest of checkpoint 3)
 
 `tree_cursor`, `get_changed_ranges`, `parser`, then `node`. Risks to read first in `MAP.md`:

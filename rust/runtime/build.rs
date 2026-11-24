@@ -301,6 +301,93 @@ fn main() {
         .define("ts_tree_print_dot_graph", "c_ref_tree_print_dot_graph")
         .define("_ts_dup", "c_ref__ts_dup")
         .file(src.join("tree.c"))
+        .define("ts_tree_cursor_new", "c_ref_tree_cursor_new")
+        .define("ts_tree_cursor_reset", "c_ref_tree_cursor_reset")
+        .define("ts_tree_cursor_init", "c_ref_tree_cursor_init")
+        .define("ts_tree_cursor_delete", "c_ref_tree_cursor_delete")
+        .define(
+            "ts_tree_cursor_goto_first_child_internal",
+            "c_ref_tree_cursor_goto_first_child_internal",
+        )
+        .define(
+            "ts_tree_cursor_goto_first_child",
+            "c_ref_tree_cursor_goto_first_child",
+        )
+        .define(
+            "ts_tree_cursor_goto_last_child_internal",
+            "c_ref_tree_cursor_goto_last_child_internal",
+        )
+        .define(
+            "ts_tree_cursor_goto_last_child",
+            "c_ref_tree_cursor_goto_last_child",
+        )
+        .define(
+            "ts_tree_cursor_goto_first_child_for_byte",
+            "c_ref_tree_cursor_goto_first_child_for_byte",
+        )
+        .define(
+            "ts_tree_cursor_goto_first_child_for_point",
+            "c_ref_tree_cursor_goto_first_child_for_point",
+        )
+        .define(
+            "ts_tree_cursor_goto_sibling_internal",
+            "c_ref_tree_cursor_goto_sibling_internal",
+        )
+        .define(
+            "ts_tree_cursor_goto_next_sibling_internal",
+            "c_ref_tree_cursor_goto_next_sibling_internal",
+        )
+        .define(
+            "ts_tree_cursor_goto_next_sibling",
+            "c_ref_tree_cursor_goto_next_sibling",
+        )
+        .define(
+            "ts_tree_cursor_goto_previous_sibling_internal",
+            "c_ref_tree_cursor_goto_previous_sibling_internal",
+        )
+        .define(
+            "ts_tree_cursor_goto_previous_sibling",
+            "c_ref_tree_cursor_goto_previous_sibling",
+        )
+        .define(
+            "ts_tree_cursor_goto_parent",
+            "c_ref_tree_cursor_goto_parent",
+        )
+        .define(
+            "ts_tree_cursor_goto_descendant",
+            "c_ref_tree_cursor_goto_descendant",
+        )
+        .define(
+            "ts_tree_cursor_current_descendant_index",
+            "c_ref_tree_cursor_current_descendant_index",
+        )
+        .define(
+            "ts_tree_cursor_current_node",
+            "c_ref_tree_cursor_current_node",
+        )
+        .define(
+            "ts_tree_cursor_current_status",
+            "c_ref_tree_cursor_current_status",
+        )
+        .define(
+            "ts_tree_cursor_current_depth",
+            "c_ref_tree_cursor_current_depth",
+        )
+        .define(
+            "ts_tree_cursor_parent_node",
+            "c_ref_tree_cursor_parent_node",
+        )
+        .define(
+            "ts_tree_cursor_current_field_id",
+            "c_ref_tree_cursor_current_field_id",
+        )
+        .define(
+            "ts_tree_cursor_current_field_name",
+            "c_ref_tree_cursor_current_field_name",
+        )
+        .define("ts_tree_cursor_copy", "c_ref_tree_cursor_copy")
+        .define("ts_tree_cursor_reset_to", "c_ref_tree_cursor_reset_to")
+        .file(src.join("tree_cursor.c"))
         .file(shim.join("alloc_ref.c"))
         .file(src.join("alloc.c"))
         .compile("tree-sitter-shim");
