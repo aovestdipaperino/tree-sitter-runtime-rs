@@ -231,6 +231,58 @@ fn main() {
         )
         .file(src.join("subtree.c"))
         .file(shim.join("subtree_shim.c"))
+        .define("ts_stack_new", "c_ref_stack_new")
+        .define("ts_stack_delete", "c_ref_stack_delete")
+        .define("ts_stack_version_count", "c_ref_stack_version_count")
+        .define(
+            "ts_stack_halted_version_count",
+            "c_ref_stack_halted_version_count",
+        )
+        .define("ts_stack_state", "c_ref_stack_state")
+        .define(
+            "ts_stack_last_external_token",
+            "c_ref_stack_last_external_token",
+        )
+        .define(
+            "ts_stack_set_last_external_token",
+            "c_ref_stack_set_last_external_token",
+        )
+        .define("ts_stack_position", "c_ref_stack_position")
+        .define("ts_stack_push", "c_ref_stack_push")
+        .define("ts_stack_pop_count", "c_ref_stack_pop_count")
+        .define("ts_stack_pop_error", "c_ref_stack_pop_error")
+        .define("ts_stack_pop_pending", "c_ref_stack_pop_pending")
+        .define("ts_stack_pop_all", "c_ref_stack_pop_all")
+        .define(
+            "ts_stack_node_count_since_error",
+            "c_ref_stack_node_count_since_error",
+        )
+        .define(
+            "ts_stack_dynamic_precedence",
+            "c_ref_stack_dynamic_precedence",
+        )
+        .define(
+            "ts_stack_has_advanced_since_error",
+            "c_ref_stack_has_advanced_since_error",
+        )
+        .define("ts_stack_record_summary", "c_ref_stack_record_summary")
+        .define("ts_stack_get_summary", "c_ref_stack_get_summary")
+        .define("ts_stack_error_cost", "c_ref_stack_error_cost")
+        .define("ts_stack_merge", "c_ref_stack_merge")
+        .define("ts_stack_can_merge", "c_ref_stack_can_merge")
+        .define("ts_stack_resume", "c_ref_stack_resume")
+        .define("ts_stack_pause", "c_ref_stack_pause")
+        .define("ts_stack_halt", "c_ref_stack_halt")
+        .define("ts_stack_is_active", "c_ref_stack_is_active")
+        .define("ts_stack_is_paused", "c_ref_stack_is_paused")
+        .define("ts_stack_is_halted", "c_ref_stack_is_halted")
+        .define("ts_stack_renumber_version", "c_ref_stack_renumber_version")
+        .define("ts_stack_swap_versions", "c_ref_stack_swap_versions")
+        .define("ts_stack_copy_version", "c_ref_stack_copy_version")
+        .define("ts_stack_remove_version", "c_ref_stack_remove_version")
+        .define("ts_stack_clear", "c_ref_stack_clear")
+        .define("ts_stack_print_dot_graph", "c_ref_stack_print_dot_graph")
+        .file(src.join("stack.c"))
         .file(shim.join("alloc_ref.c"))
         .file(src.join("alloc.c"))
         .compile("tree-sitter-shim");

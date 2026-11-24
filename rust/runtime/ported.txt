@@ -7,3 +7,4 @@ alloc.c
 lexer.c
 language.c
 subtree.c
+stack.c

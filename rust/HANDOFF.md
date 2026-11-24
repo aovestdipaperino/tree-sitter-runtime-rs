@@ -44,8 +44,23 @@ runs on the Rust subtree: the whole-library harness still shows 0 mismatches.
 Known layout difference (harmless): C `SubtreeInlineData` has alignment 2, the port 8; it only occurs
 inside the 8-aligned unions.
 
+## Stack (checkpoint 3, second unit)
+`stack.rs` mirrors `stack.c` structure for structure (`Stack` is opaque to C, so its layout is free;
+slices, summaries and subtree arrays keep the C layout). `tests/stack.rs` drives the Rust and the C
+stack with 1,500 lockstep random scripts (push/pop_count/pop_pending/pop_all/pop_error, copy,
+remove, renumber, swap, pause/resume/halt, last external token, summaries, fork-and-merge, many-branch
+merges up to the link limit, two-level merges, clear) and compares every observable of every version
+after each step, plus normalized dot-graph output. Mutations in link limit, iterator limit, merge
+state check, summary depth, error recovery cost and has-advanced are caught. Not catchable by
+observation: node-pool size (memory only) and `==` vs `>=` in the pop-count callback (equivalent);
+the `&&` in the both-have-errors merge shortcut is not reached because heads with differing error
+costs cannot merge.
+Latent C hazard reproduced: merging two versions whose paths contain null-subtree links to the same
+node dereferences the null subtree (`ts_subtree_dynamic_precedence`); the test never merges in
+scripts that push null subtrees. `stack.c` is now dropped from the C build.
+
 ## Next (rest of checkpoint 3)
-`stack`, `tree`,
+`tree`,
 `tree_cursor`, `get_changed_ranges`, `parser`, then `node`. Risks to read first in `MAP.md`:
 `Subtree` bitfields and low-bit pointer tagging need hand-written accessors with layout tests;
 C and Rust units must share those structs while mixed. `query.c` stays C until the last wave.
