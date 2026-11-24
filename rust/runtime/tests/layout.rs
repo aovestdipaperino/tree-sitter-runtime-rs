@@ -2,7 +2,7 @@
 use core::mem::{align_of, offset_of, size_of};
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
-use tree_sitter_runtime_rs::{api::*, length::Length};
+use tree_sitter_runtime_rs::{api::*, length::Length, reduce_action::*};
 
 unsafe extern "C" {
     fn shim_layout_len() -> usize;
@@ -26,8 +26,8 @@ fn c_table() -> BTreeMap<String, usize> {
 
 macro_rules! rust_table {
     ($m:ident; $( $t:ident { $($f:ident),* } ),* $(,)?) => {$(
-        $m.insert(format!("{}.size", stringify!($t)), size_of::<$t>());
-        $m.insert(format!("{}.align", stringify!($t)), align_of::<$t>());
+        $m.insert(format!("{}.sizeof", stringify!($t)), size_of::<$t>());
+        $m.insert(format!("{}.alignof", stringify!($t)), align_of::<$t>());
         $( $m.insert(format!("{}.{}", stringify!($t), stringify!($f)), offset_of!($t, $f)); )*
     )*};
 }
@@ -51,6 +51,8 @@ fn rust_layout_equals_c_layout() {
         TSQueryCursorState { payload, current_byte_offset },
         TSQueryCursorOptions { payload, progress_callback },
         Length { bytes, extent },
+        ReduceAction { count, symbol, dynamic_precedence, production_id },
+        ReduceActionSet { contents, size, capacity },
         TSLanguageMetadata { major_version, minor_version, patch_version },
     );
     // The C field is named `type`, a Rust keyword.

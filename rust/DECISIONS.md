@@ -95,3 +95,12 @@ dropped from the build and its Rust replacement exports the same symbols (`exter
 until the last C unit that includes them is gone. The runtime is therefore runnable and testable
 after every unit.
 Consequences: layout drift is caught by the layout test, not by crashes. Confirm or veto.
+
+## Known upstream quirks reproduced on purpose (ADR-004)
+- `U16_NEXT_BE` in `src/unicode.h` reads the trail unit of a surrogate pair in host byte order
+  without `be16toh`. On a little-endian host a UTF-16 BE surrogate pair is therefore usually not
+  recognised and decodes as a lone lead surrogate. `unicode.rs` does the same, and
+  `tests/unicode.rs` pins it. Worth reporting upstream; the fix would change trees, so it needs a
+  decision of its own.
+- `ts_assert` stays on in release builds (the C build never defines `NDEBUG`); `ts_assert!` is a
+  plain `assert!`. A failed assertion aborts with a Rust panic message instead of glibc's.

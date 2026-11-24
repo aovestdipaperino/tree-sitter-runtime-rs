@@ -15,9 +15,9 @@ after each group).
 | Unit | LOC | State | Notes |
 |---|---|---|---|
 | `include/tree_sitter/api.h` | 1,298 | open | the contract: Rust declarations of every public struct and function (`rust/runtime/src/api.rs`) |
-| `src/error_costs.h`, `src/host.h`, `src/ts_assert.h` | 38 | open | constants and macros |
-| `src/portable/endian.h` | 187 | open | byte order helpers, replaced by `to_le`/`from_le` |
-| `src/unicode/` (`utf8.h`, `utf16.h`, `umachine.h`, ...), `src/unicode.h` | 2,008 | open | UTF-8/16 decoding for the lexer |
+| `src/error_costs.h`, `src/host.h`, `src/ts_assert.h` | 38 | ported | constants and macros |
+| `src/portable/endian.h` | 187 | ported | byte order helpers, replaced by `to_le`/`from_le` |
+| `src/unicode/` (`utf8.h`, `utf16.h`, `umachine.h`, ...), `src/unicode.h` | 2,008 | ported | UTF-8/16 decoding for the lexer |
 | `src/alloc.c`, `src/alloc.h` | 91 | ported | allocator hooks (`ts_set_allocator`) |
 | `src/point.c` | 14 | ported | `ts_point_*` |
 
@@ -25,8 +25,8 @@ after each group).
 | Unit | LOC | State | Notes |
 |---|---|---|---|
 | `src/length.h`, `src/point.h` | 94 | ported | inline helpers |
-| `src/array.h` | 291 | open | generic array; layout shared with C until the end |
-| `src/reduce_action.h` | 27 | open | |
+| `src/array.h` | 291 | ported | generic array; layout shared with C until the end |
+| `src/reduce_action.h` | 27 | ported | |
 
 ### Wave 4: tangled core (checkpoint 2 and 3, ported as one piece)
 `src/parser.c` (2,012), `src/stack.c` (795), `src/subtree.c` (923, flagged `keep` by the analyzer

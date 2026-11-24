@@ -82,3 +82,43 @@ pub unsafe extern "C" fn ts_set_allocator(
         ts_current_free = Some(new_free.unwrap_or(free));
     }
 }
+
+/// `ts_malloc` from `alloc.h`: calls the current hook.
+///
+/// # Safety
+/// Same contract as `malloc`.
+#[inline]
+pub unsafe fn ts_malloc(size: usize) -> *mut c_void {
+    // SAFETY: the hooks are initialised statically and only replaced by `ts_set_allocator`.
+    unsafe { (ts_current_malloc.unwrap_unchecked())(size) }
+}
+
+/// `ts_calloc` from `alloc.h`.
+///
+/// # Safety
+/// Same contract as `calloc`.
+#[inline]
+pub unsafe fn ts_calloc(count: usize, size: usize) -> *mut c_void {
+    // SAFETY: as for `ts_malloc`.
+    unsafe { (ts_current_calloc.unwrap_unchecked())(count, size) }
+}
+
+/// `ts_realloc` from `alloc.h`.
+///
+/// # Safety
+/// Same contract as `realloc`.
+#[inline]
+pub unsafe fn ts_realloc(buffer: *mut c_void, size: usize) -> *mut c_void {
+    // SAFETY: as for `ts_malloc`.
+    unsafe { (ts_current_realloc.unwrap_unchecked())(buffer, size) }
+}
+
+/// `ts_free` from `alloc.h`.
+///
+/// # Safety
+/// Same contract as `free`.
+#[inline]
+pub unsafe fn ts_free(buffer: *mut c_void) {
+    // SAFETY: as for `ts_malloc`.
+    unsafe { (ts_current_free.unwrap_unchecked())(buffer) }
+}

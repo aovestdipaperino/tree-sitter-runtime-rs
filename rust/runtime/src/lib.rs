@@ -4,5 +4,9 @@
 //! are compiled from `src/` by `build.rs`.
 pub mod alloc;
 pub mod api;
+pub mod array;
+pub mod consts;
 pub mod length;
 pub mod point;
+pub mod reduce_action;
+pub mod unicode;

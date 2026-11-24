@@ -4,13 +4,14 @@
 #include <string.h>
 #include "tree_sitter/api.h"
 #include "length.h"
+#include "reduce_action.h"
 
 typedef struct {
   const char *key;
   size_t value;
 } Entry;
 
-#define SZ(T) {#T ".size", sizeof(T)}, {#T ".align", _Alignof(T)}
+#define SZ(T) {#T ".sizeof", sizeof(T)}, {#T ".alignof", _Alignof(T)}
 #define OFF(T, F) {#T "." #F, offsetof(T, F)}
 
 static const Entry TABLE[] = {
@@ -29,6 +30,8 @@ static const Entry TABLE[] = {
   SZ(TSQueryPredicateStep), OFF(TSQueryPredicateStep, type), OFF(TSQueryPredicateStep, value_id),
   SZ(TSQueryCursorState), OFF(TSQueryCursorState, payload), OFF(TSQueryCursorState, current_byte_offset),
   SZ(TSQueryCursorOptions), OFF(TSQueryCursorOptions, payload), OFF(TSQueryCursorOptions, progress_callback),
+  SZ(ReduceAction), OFF(ReduceAction, count), OFF(ReduceAction, symbol), OFF(ReduceAction, dynamic_precedence), OFF(ReduceAction, production_id),
+  SZ(ReduceActionSet), OFF(ReduceActionSet, contents), OFF(ReduceActionSet, size), OFF(ReduceActionSet, capacity),
   SZ(Length), OFF(Length, bytes), OFF(Length, extent),
   SZ(TSLanguageMetadata), OFF(TSLanguageMetadata, major_version), OFF(TSLanguageMetadata, minor_version), OFF(TSLanguageMetadata, patch_version),
 };
