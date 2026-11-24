@@ -6,3 +6,4 @@ point.c
 alloc.c
 lexer.c
 language.c
+subtree.c

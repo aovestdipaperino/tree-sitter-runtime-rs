@@ -33,7 +33,7 @@ after each group).
 but required by the core), `src/tree.c` (114), `src/tree_cursor.c` (639), `src/lexer.c` (427),
 `src/language.c` (259), `src/get_changed_ranges.c` (497), `src/reusable_node.h` (81).
 Order inside the wave: lexer, language, subtree, stack, tree, tree_cursor, get_changed_ranges, parser.
-State: `lexer.c` ported, `language.c` + `language.h` helpers ported (checkpoint 2 reached); the rest open.
+State: `lexer.c`, `language.c` (+ header helpers) and `subtree.c` (+ `subtree.h`) ported; `stack`, `tree`, `tree_cursor`, `get_changed_ranges`, `parser`, `reusable_node.h` open.
 
 ### Wave 5
 `src/node.c` (742): open.

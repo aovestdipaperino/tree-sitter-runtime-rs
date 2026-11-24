@@ -162,6 +162,75 @@ fn main() {
         )
         .file(src.join("language.c"))
         .file(shim.join("lang_ref.c"))
+        .define(
+            "ts_external_scanner_state_init",
+            "c_ref_external_scanner_state_init",
+        )
+        .define(
+            "ts_external_scanner_state_copy",
+            "c_ref_external_scanner_state_copy",
+        )
+        .define(
+            "ts_external_scanner_state_delete",
+            "c_ref_external_scanner_state_delete",
+        )
+        .define(
+            "ts_external_scanner_state_data",
+            "c_ref_external_scanner_state_data",
+        )
+        .define(
+            "ts_external_scanner_state_eq",
+            "c_ref_external_scanner_state_eq",
+        )
+        .define("ts_subtree_array_copy", "c_ref_subtree_array_copy")
+        .define("ts_subtree_array_clear", "c_ref_subtree_array_clear")
+        .define("ts_subtree_array_delete", "c_ref_subtree_array_delete")
+        .define(
+            "ts_subtree_array_remove_trailing_extras",
+            "c_ref_subtree_array_remove_trailing_extras",
+        )
+        .define("ts_subtree_array_reverse", "c_ref_subtree_array_reverse")
+        .define("ts_subtree_pool_new", "c_ref_subtree_pool_new")
+        .define("ts_subtree_pool_delete", "c_ref_subtree_pool_delete")
+        .define("ts_subtree_new_leaf", "c_ref_subtree_new_leaf")
+        .define("ts_subtree_set_symbol", "c_ref_subtree_set_symbol")
+        .define("ts_subtree_new_error", "c_ref_subtree_new_error")
+        .define("ts_subtree_clone", "c_ref_subtree_clone")
+        .define("ts_subtree_make_mut", "c_ref_subtree_make_mut")
+        .define("ts_subtree_compress", "c_ref_subtree_compress")
+        .define(
+            "ts_subtree_summarize_children",
+            "c_ref_subtree_summarize_children",
+        )
+        .define("ts_subtree_new_node", "c_ref_subtree_new_node")
+        .define("ts_subtree_new_error_node", "c_ref_subtree_new_error_node")
+        .define(
+            "ts_subtree_new_missing_leaf",
+            "c_ref_subtree_new_missing_leaf",
+        )
+        .define("ts_subtree_retain", "c_ref_subtree_retain")
+        .define("ts_subtree_release", "c_ref_subtree_release")
+        .define("ts_subtree_compare", "c_ref_subtree_compare")
+        .define("ts_subtree_edit", "c_ref_subtree_edit")
+        .define(
+            "ts_subtree_last_external_token",
+            "c_ref_subtree_last_external_token",
+        )
+        .define("ts_subtree_string", "c_ref_subtree_string")
+        .define(
+            "ts_subtree_print_dot_graph",
+            "c_ref_subtree_print_dot_graph",
+        )
+        .define(
+            "ts_subtree_external_scanner_state",
+            "c_ref_subtree_external_scanner_state",
+        )
+        .define(
+            "ts_subtree_external_scanner_state_eq",
+            "c_ref_subtree_external_scanner_state_eq",
+        )
+        .file(src.join("subtree.c"))
+        .file(shim.join("subtree_shim.c"))
         .file(shim.join("alloc_ref.c"))
         .file(src.join("alloc.c"))
         .compile("tree-sitter-shim");

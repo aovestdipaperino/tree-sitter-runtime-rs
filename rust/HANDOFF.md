@@ -31,8 +31,21 @@ stays C; remove it when `c_variadic` stabilises. Latent C hazard reproduced as i
 left at EOF with a non-null chunk (possible after an empty included range) reads one range past
 the array; the test avoids that state.
 
-## Next (checkpoint 3)
-The tangled core as one piece: `subtree`, `stack`, `tree`,
+## Subtree (checkpoint 3, first unit)
+`subtree.rs`: `Subtree`/`MutableSubtree` are unions of an inline `u64` (bitfield accessors, little-endian
+only) and a heap pointer; `SubtreeHeapData` keeps the C layout with its 11 flags as a `u16`. Tests:
+bit layout against the C compiler for 200k random inline values and every heap flag; setters vs C bitfield
+assignment; 3,000 lockstep random operation scripts (leaves, nodes, error nodes, edits, make_mut,
+compare, strings, array ops, external scanner state) with the full state of every live tree compared
+after each step through the C accessors; compress on left-leaning chains. Eight seeded mutations,
+including repeat-depth and edit-boundary ones, are caught (one equivalent mutant, `>` vs `>=` on
+repeat depth, cannot be). `subtree.c` is dropped from the C build, so the C stack/parser/tree code now
+runs on the Rust subtree: the whole-library harness still shows 0 mismatches.
+Known layout difference (harmless): C `SubtreeInlineData` has alignment 2, the port 8; it only occurs
+inside the 8-aligned unions.
+
+## Next (rest of checkpoint 3)
+`stack`, `tree`,
 `tree_cursor`, `get_changed_ranges`, `parser`, then `node`. Risks to read first in `MAP.md`:
 `Subtree` bitfields and low-bit pointer tagging need hand-written accessors with layout tests;
 C and Rust units must share those structs while mixed. `query.c` stays C until the last wave.

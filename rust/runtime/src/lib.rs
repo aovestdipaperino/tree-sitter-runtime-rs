@@ -12,4 +12,5 @@ pub mod lexer;
 pub mod parser_abi;
 pub mod point;
 pub mod reduce_action;
+pub mod subtree;
 pub mod unicode;

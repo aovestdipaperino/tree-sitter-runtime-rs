@@ -2,6 +2,7 @@
 use core::mem::{align_of, offset_of, size_of};
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
+use tree_sitter_runtime_rs::subtree::*;
 use tree_sitter_runtime_rs::{
     api::*, language::*, length::Length, lexer::*, parser_abi::*, reduce_action::*,
 };
@@ -53,6 +54,10 @@ fn rust_layout_equals_c_layout() {
         TSQueryCursorState { payload, current_byte_offset },
         TSQueryCursorOptions { payload, progress_callback },
         Length { bytes, extent },
+        ExternalScannerState { length },
+        SubtreeInlineData {}, Subtree {}, MutableSubtree {},
+        SubtreePool { free_trees, tree_stack },
+        SubtreeHeapData { ref_count, padding, size, lookahead_bytes, error_cost, child_count, symbol, parse_state },
         TableEntry { actions, action_count, is_reusable },
         LookaheadIterator { language, data, group_end, state, table_value, section_index, group_count,
                 is_small_state, actions, symbol, next_state, action_count },
@@ -73,8 +78,53 @@ fn rust_layout_equals_c_layout() {
         ReduceActionSet { contents, size, capacity },
         TSLanguageMetadata { major_version, minor_version, patch_version },
     );
-    // The C field is named `type`, a Rust keyword.
+    // Fields inside the heap data's anonymous unions and the external state's data union.
+    let u = offset_of!(SubtreeHeapData, u);
+    r.insert(
+        "ExternalScannerState.long_data".into(),
+        offset_of!(ExternalScannerState, data),
+    );
+    r.insert(
+        "ExternalScannerState.short_data".into(),
+        offset_of!(ExternalScannerState, data),
+    );
+    r.insert("SubtreeHeapData.external_scanner_state".into(), u);
+    r.insert("SubtreeHeapData.lookahead_char".into(), u);
+    r.insert(
+        "SubtreeHeapData.visible_child_count".into(),
+        u + offset_of!(NodeData, visible_child_count),
+    );
+    r.insert(
+        "SubtreeHeapData.named_child_count".into(),
+        u + offset_of!(NodeData, named_child_count),
+    );
+    r.insert(
+        "SubtreeHeapData.visible_descendant_count".into(),
+        u + offset_of!(NodeData, visible_descendant_count),
+    );
+    r.insert(
+        "SubtreeHeapData.dynamic_precedence".into(),
+        u + offset_of!(NodeData, dynamic_precedence),
+    );
+    r.insert(
+        "SubtreeHeapData.repeat_depth".into(),
+        u + offset_of!(NodeData, repeat_depth),
+    );
+    r.insert(
+        "SubtreeHeapData.production_id".into(),
+        u + offset_of!(NodeData, production_id),
+    );
+    r.insert(
+        "SubtreeHeapData.first_leaf".into(),
+        u + offset_of!(NodeData, first_leaf),
+    );
+    // The C inline data has alignment 2 (its widest member is a uint16_t) but the port keeps it
+    // as one u64 (alignment 8). It only ever occurs inside the 8-aligned `Subtree` unions, whose
+    // layout is compared above, so only its size is checked.
+    r.remove("SubtreeInlineData.alignof");
     let mut c = c_table();
+    c.remove("SubtreeInlineData.alignof");
+    // The C field is named `type`, a Rust keyword.
     if let Some(v) = c.remove("TSQueryPredicateStep.type") {
         c.insert("TSQueryPredicateStep.type_".into(), v);
     }

@@ -7,6 +7,7 @@
 #include "reduce_action.h"
 #include "lexer.h"
 #include "language.h"
+#include "subtree.h"
 #include "parser.h"
 
 typedef struct {
@@ -56,6 +57,14 @@ static const Entry TABLE[] = {
     OFF(LookaheadIterator, state), OFF(LookaheadIterator, table_value), OFF(LookaheadIterator, section_index),
     OFF(LookaheadIterator, group_count), OFF(LookaheadIterator, is_small_state), OFF(LookaheadIterator, actions),
     OFF(LookaheadIterator, symbol), OFF(LookaheadIterator, next_state), OFF(LookaheadIterator, action_count),
+  SZ(ExternalScannerState), OFF(ExternalScannerState, long_data), OFF(ExternalScannerState, short_data), OFF(ExternalScannerState, length),
+  SZ(SubtreeInlineData), SZ(Subtree), SZ(MutableSubtree), SZ(SubtreePool), OFF(SubtreePool, free_trees), OFF(SubtreePool, tree_stack),
+  SZ(SubtreeHeapData), OFF(SubtreeHeapData, ref_count), OFF(SubtreeHeapData, padding), OFF(SubtreeHeapData, size),
+    OFF(SubtreeHeapData, lookahead_bytes), OFF(SubtreeHeapData, error_cost), OFF(SubtreeHeapData, child_count), OFF(SubtreeHeapData, symbol),
+    OFF(SubtreeHeapData, parse_state), OFF(SubtreeHeapData, visible_child_count), OFF(SubtreeHeapData, named_child_count),
+    OFF(SubtreeHeapData, visible_descendant_count), OFF(SubtreeHeapData, dynamic_precedence), OFF(SubtreeHeapData, repeat_depth),
+    OFF(SubtreeHeapData, production_id), OFF(SubtreeHeapData, first_leaf), OFF(SubtreeHeapData, external_scanner_state),
+    OFF(SubtreeHeapData, lookahead_char),
   SZ(Length), OFF(Length, bytes), OFF(Length, extent),
   SZ(TSLanguageMetadata), OFF(TSLanguageMetadata, major_version), OFF(TSLanguageMetadata, minor_version), OFF(TSLanguageMetadata, patch_version),
 };
