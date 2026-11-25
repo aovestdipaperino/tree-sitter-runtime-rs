@@ -147,6 +147,123 @@ impl Session {
     }
 }
 
+/// Run one cursor to exhaustion, in match or capture order, returning a text record.
+unsafe fn run_cursor(q: *const TSQuery, root: TSNode, mode: u32) -> String {
+    let c = ts_query_cursor_new();
+    let mut out = String::new();
+    match mode {
+        1 => ts_query_cursor_set_match_limit(c, 3),
+        2 => {
+            let (a, b) = (ts_node_start_byte(root) + 5, ts_node_end_byte(root).saturating_sub(5));
+            let _ = writeln!(out, "byte_range={}", ts_query_cursor_set_byte_range(c, a, b) as u8);
+        }
+        3 => ts_query_cursor_set_max_start_depth(c, 2),
+        4 => {
+            let (a, b) = (ts_node_start_byte(root) + 3, ts_node_end_byte(root).saturating_sub(3));
+            let _ = writeln!(out, "contain={}", ts_query_cursor_set_containing_byte_range(c, a, b) as u8);
+        }
+        _ => {}
+    }
+    ts_query_cursor_exec(c, q, root);
+    let mut m: TSQueryMatch = core::mem::zeroed();
+    let mut idx = 0u32;
+    if mode == 5 {
+        let mut ci = 0u32;
+        while ts_query_cursor_next_capture(c, &mut m, &mut ci) {
+            let cap = &*m.captures.add(ci as usize);
+            let _ = writeln!(out, "cap id={} pat={} n={} idx={} {}", m.id, m.pattern_index, m.capture_count, cap.index, nd(cap.node));
+            if ci % 5 == 3 {
+                ts_query_cursor_remove_match(c, m.id);
+            }
+        }
+    } else {
+        while ts_query_cursor_next_match(c, &mut m) {
+            let _ = write!(out, "match id={} pat={}", m.id, m.pattern_index);
+            for i in 0..m.capture_count as usize {
+                let cap = &*m.captures.add(i);
+                let _ = write!(out, " {}={}", cap.index, nd(cap.node));
+            }
+            out.push('\n');
+            idx += 1;
+            if mode == 6 && idx % 4 == 0 {
+                ts_query_cursor_remove_match(c, m.id);
+            }
+        }
+    }
+    let _ = writeln!(out, "exceeded={}", ts_query_cursor_did_exceed_match_limit(c) as u8);
+    ts_query_cursor_delete(c);
+    out
+}
+
+impl Session {
+    /// Compile `src` as a query for `lang`, describe the query and run it over the current tree.
+    pub unsafe fn query_report(&self, lang: *const TSLanguage, src: &str) -> String {
+        let mut out = String::new();
+        let mut off: u32 = 0;
+        let mut err: TSQueryError = 0;
+        let q = ts_query_new(lang, src.as_ptr() as *const c_char, src.len() as u32, &mut off, &mut err);
+        if q.is_null() {
+            let _ = writeln!(out, "ERR type={} offset={}", err as u32, off);
+            return out;
+        }
+        let (np, nc, ns) = (ts_query_pattern_count(q), ts_query_capture_count(q), ts_query_string_count(q));
+        let _ = writeln!(out, "patterns={np} captures={nc} strings={ns}");
+        for i in 0..nc {
+            let mut len = 0u32;
+            let name = ts_query_capture_name_for_id(q, i, &mut len);
+            let _ = write!(out, " cap{i}={}", CStr::from_ptr(name).to_string_lossy());
+        }
+        for i in 0..ns {
+            let mut len = 0u32;
+            let v = ts_query_string_value_for_id(q, i, &mut len);
+            let _ = write!(out, " str{i}={}", CStr::from_ptr(v).to_string_lossy());
+        }
+        out.push('\n');
+        for p in 0..np {
+            let mut n = 0u32;
+            let steps = ts_query_predicates_for_pattern(q, p, &mut n);
+            let _ = write!(out, "pat{p} bytes={}-{} rooted={} nonlocal={} preds=[", ts_query_start_byte_for_pattern(q, p), ts_query_end_byte_for_pattern(q, p), ts_query_is_pattern_rooted(q, p) as u8, ts_query_is_pattern_non_local(q, p) as u8);
+            for i in 0..n as usize {
+                let st = &*steps.add(i);
+                let _ = write!(out, "{}:{},", st.type_ as u32, st.value_id);
+            }
+            out.push_str("] quant=");
+            for c in 0..nc {
+                let _ = write!(out, "{}", ts_query_capture_quantifier_for_id(q, p, c) as u32);
+            }
+            out.push_str(" guaranteed=");
+            for st in 0..24 {
+                let _ = write!(out, "{}", ts_query_is_pattern_guaranteed_at_step(q, st) as u8);
+            }
+            out.push('\n');
+        }
+        if !self.tree.is_null() {
+            let root = ts_tree_root_node(self.tree);
+            for mode in 0..7u32 {
+                let _ = writeln!(out, "-- mode {mode}");
+                out.push_str(&run_cursor(q, root, mode));
+            }
+            // disabled capture / pattern, then run again
+            if nc > 0 {
+                ts_query_disable_capture(q, c"zzz".as_ptr(), 3);
+                let mut len = 0u32;
+                let first = ts_query_capture_name_for_id(q, 0, &mut len);
+                ts_query_disable_capture(q, first, len);
+                out.push_str("-- disabled capture 0\n");
+                out.push_str(&run_cursor(q, root, 0));
+            }
+            if np > 1 {
+                ts_query_disable_pattern(q, 1);
+                out.push_str("-- disabled pattern 1\n");
+                out.push_str(&run_cursor(q, root, 0));
+            }
+        }
+        // ts_query_copy is not in the 0.26 bindings the Rust side is generated from yet.
+        ts_query_delete(q);
+        out
+    }
+}
+
 impl Drop for Session {
     fn drop(&mut self) {
         unsafe {

@@ -1,7 +1,7 @@
 //! Differential harness for the Rust runtime: the same public-API scenarios run against the Rust
 //! runtime (`rt`) and the unmodified C reference with renamed symbols (`rf`), on the lite grammars,
 //! comparing S-expressions, a node-by-node dump, and changed ranges. See rust/DECISIONS.md ADR-007.
-use core::ffi::c_void;
+use core::ffi::{c_void, CStr};
 use std::{env, fs, path::PathBuf, process::ExitCode};
 
 pub struct EditArgs {
@@ -66,6 +66,9 @@ struct Stats {
     compared: usize,
     mismatches: usize,
     by_kind: std::collections::BTreeMap<&'static str, (usize, usize)>,
+    query_ok: usize,
+    query_err: usize,
+    query_matches: usize,
 }
 
 impl Stats {
@@ -131,6 +134,109 @@ fn languages() -> Vec<(&'static str, *const c_void)> {
     ]
 }
 
+const FIXED_QUERIES: &[&str] = &[
+    "(_) @x",
+    "((_) @a . (_) @b)",
+    "(_ (_) @c)",
+    "[(_) (_)] @alt",
+    "((_) @a (#eq? @a \"x\"))",
+    "((_) @a (#match? @a \"^[a-z]\") (#not-eq? @a \"y\"))",
+    "(ERROR) @e",
+    "(MISSING) @m",
+    "(_ (ERROR) @e)",
+    "\"(\" @p",
+    "\"{\" @open \"}\" @close",
+    "(_)+ @many",
+    "(_)* @star",
+    "(_)? @maybe",
+    "((_) @a . (_) @b . (_) @c)",
+    "(_ . (_) @first)",
+    "(_ (_) @last .)",
+    "(((_) @inner)* @outer)",
+    "(_ (_) @a (_) @b) @whole",
+    "; just a comment",
+    "",
+    "(",
+    ")",
+    "(_ @bad",
+    "(nonexistent_node_type) @x",
+    "(_ nonexistent_field: (_) @x)",
+    "(_ !nonexistent_field)",
+    "((_) @a (#bogus? @a))",
+    "(_) @a @b @c @d",
+    "\"unterminated",
+    "[",
+    "[(_) @a (_) @b]",
+    "(_) @cap.with.dots",
+    "(_ (_ (_ (_ (_) @deep))))",
+    "((_) @a (#set! key \"v\"))",
+    "(_ (_) @x (#is-not? local))",
+    "((_) @a (#any-of? @a \"a\" \"b\"))",
+];
+
+unsafe fn gen_queries(lang: *const c_void, rng: &mut Rng, count: usize) -> Vec<String> {
+    let l = lang as *const rt::TSLanguage;
+    let n = rt::ts_language_symbol_count(l);
+    let mut names: Vec<String> = Vec::new();
+    for sym in 0..n {
+        if rt::ts_language_symbol_type(l, sym as u16) == 0 {
+            names.push(CStr::from_ptr(rt::ts_language_symbol_name(l, sym as u16)).to_string_lossy().into_owned());
+        }
+    }
+    let fc = rt::ts_language_field_count(l);
+    let mut fields: Vec<String> = Vec::new();
+    for f in 1..=fc {
+        fields.push(CStr::from_ptr(rt::ts_language_field_name_for_id(l, f as u16)).to_string_lossy().into_owned());
+    }
+    let mut out = Vec::new();
+    if names.is_empty() {
+        return out;
+    }
+    for _ in 0..count {
+        let a = &names[rng.below(names.len())];
+        let b = &names[rng.below(names.len())];
+        let c = &names[rng.below(names.len())];
+        let f = if fields.is_empty() { "body".to_string() } else { fields[rng.below(fields.len())].clone() };
+        let t = match rng.below(16) {
+            0 => format!("({a}) @x"),
+            1 => format!("({a} ({b}) @y)"),
+            2 => format!("({a} ({b})* @y . ({c}) @z)"),
+            3 => format!("({a} (_) @p . (_) @q)"),
+            4 => format!("[({a}) ({b})] @alt"),
+            5 => format!("({a} {f}: ({b}) @v)"),
+            6 => format!("({a} !{f})"),
+            7 => format!("(({a}) @a (#eq? @a \"x\"))"),
+            8 => format!("({a} ({b})? @o ({c}) @r)"),
+            9 => format!("(({a}) ({b})) @seq"),
+            10 => format!("({a} . ({b}) @first)"),
+            11 => format!("({a} ({b}) @l .)"),
+            12 => format!("(_ ({a}) @x ({b}) @y)"),
+            13 => format!("(({a}) @a . ({b}) @b)+"),
+            14 => format!("({a} (({b}) @b)+)"),
+            _ => format!("({a} {f}: [({b}) ({c})] @v) @outer"),
+        };
+        out.push(t);
+    }
+    out
+}
+
+fn query_files(name: &str) -> Vec<String> {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("queries").join(name);
+    let mut out = Vec::new();
+    let Ok(rd) = fs::read_dir(&dir) else { return out };
+    let mut paths: Vec<_> = rd.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    paths.sort();
+    for p in paths {
+        let Ok(text) = fs::read_to_string(&p) else { continue };
+        out.push(text.clone());
+        // and the top-level blocks one at a time (blank-line separated), capped
+        for block in text.split("\n\n").filter(|b| b.contains('(') || b.contains('"')).take(40) {
+            out.push(block.to_string());
+        }
+    }
+    out
+}
+
 fn utf16(text: &[u8], big: bool) -> Vec<u8> {
     String::from_utf8_lossy(text)
         .encode_utf16()
@@ -194,6 +300,26 @@ fn main() -> ExitCode {
                     let a = rt::Session::new(lang).parse(text, 0, chunk, false);
                     let b = rf::Session::new(lang).parse(text, 0, chunk, false);
                     stats.check(kind, name, idx, &a, &b);
+                }
+                // queries: compile, describe and run over the parsed tree
+                if idx < 4 {
+                    let mut qs: Vec<String> = FIXED_QUERIES.iter().map(|q| q.to_string()).collect();
+                    qs.extend(gen_queries(lang, &mut rng, 24));
+                    qs.extend(query_files(name));
+                    let (mut sa, mut sb) = (rt::Session::new(lang), rf::Session::new(lang));
+                    sa.parse(text, 0, text.len().max(1), false);
+                    sb.parse(text, 0, text.len().max(1), false);
+                    for (qi, q) in qs.iter().enumerate() {
+                        let a = (sa.query_report(lang as *const rt::TSLanguage, q), Vec::new());
+                        let b = (sb.query_report(lang as *const rf::TSLanguage, q), Vec::new());
+                        stats.check("query", name, idx * 10_000 + qi, &a, &b);
+                        if a.0.starts_with("ERR") {
+                            stats.query_err += 1;
+                        } else {
+                            stats.query_ok += 1;
+                            stats.query_matches += a.0.matches("match id=").count() + a.0.matches("cap id=").count();
+                        }
+                    }
                 }
                 // cancelled by the progress callback, then resumed
                 for limit in [1u32, 2, 5, 40] {
@@ -285,6 +411,7 @@ fn main() -> ExitCode {
         );
     }
     println!("--");
+    println!("queries: {} compiled, {} rejected, {} match/capture records", stats.query_ok, stats.query_err, stats.query_matches);
     for (k, (n, bad)) in &stats.by_kind {
         println!("  {k:<16} {n:>6} compared, {bad} mismatches");
     }
