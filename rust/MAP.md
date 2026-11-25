@@ -33,7 +33,7 @@ after each group).
 but required by the core), `src/tree.c` (114), `src/tree_cursor.c` (639), `src/lexer.c` (427),
 `src/language.c` (259), `src/get_changed_ranges.c` (497), `src/reusable_node.h` (81).
 Order inside the wave: lexer, language, subtree, stack, tree, tree_cursor, get_changed_ranges, parser.
-State: `lexer.c`, `language.c`, `subtree.c`, `stack.c`, `tree.c`, `tree_cursor.c`, `get_changed_ranges.c`, `parser.c`, `node.c`, `query.c` (as query.rs, query_analysis.rs, query_parse.rs, query_cursor.rs) and `reusable_node.h` ported. lib.c/atomic.h, wasm stubs and the variadic log shim remain C.
+State: `lexer.c`, `language.c`, `subtree.c`, `stack.c`, `tree.c`, `tree_cursor.c`, `get_changed_ranges.c`, `parser.c`, `node.c`, `query.c` (as query.rs, query_analysis.rs, query_parse.rs, query_cursor.rs) and `reusable_node.h` ported, plus the no-wasm `wasm_store.c` stubs (wasm_store.rs). Only the variadic log shim (`runtime/c/lexer_log.c`, ADR-012) remains C.
 
 ### Wave 5
 `src/node.c` (742): open.
@@ -42,8 +42,8 @@ State: `lexer.c`, `language.c`, `subtree.c`, `stack.c`, `tree.c`, `tree_cursor.c
 | Unit | State | Notes |
 |---|---|---|
 | `src/query.c` (4,421) | open | ADR-005: kept as C until here, ported last |
-| `src/lib.c` | open | build glue, dissolves into the crate |
-| `src/atomic.h` | open | flagged `keep` (platform-specific); replaced by `core::sync::atomic` |
+| `src/lib.c` | done | build glue; the build never compiled it, so nothing to port |
+| `src/atomic.h` | done | no C includes it any more; subtree.rs uses `core::sync::atomic` |
 
 ## Out of scope
 `src/wasm_store.c` and `src/wasm/` (ADR-003). Windows (ADR-009, later).

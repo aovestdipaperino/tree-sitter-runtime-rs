@@ -116,7 +116,7 @@ only, the real start check is stricter), capture-order tie comparisons, `capture
 Not covered: `ts_query_copy` (harness bindings are still 0.26; comes back with the binding fork).
 
 ## Next
-lib.c/atomic.h, wasm stubs (tiny), then the binding fork + tokensave test, then rust-anything
+the binding fork + tokensave test, then rust-anything
 front-door/wire/lift as feasible. Medium/large grammar tiers after the runtime.
 
 ## Open questions for the user
@@ -126,3 +126,7 @@ front-door/wire/lift as feasible. Medium/large grammar tiers after the runtime.
 Reference C = pristine v0.27.2 + `rust/patches/*.patch`. Add a fix by adding a patch (generated
 against `src/`, applied with `-p2`) and the matching Rust change; tests then compare to the patched
 oracle. Rebased to v0.27.2 (ADR-013). TODO: Rust `write_to_string` is recursive while upstream is now iterative (deep trees overflow the stack).
+
+## lib.c, atomic.h and the wasm stubs
+
+`lib.c` is an amalgamation file the build never compiled, and no remaining C includes `atomic.h` (subtree.rs uses `core::sync::atomic`), so neither needed code. The 14 no-wasm dummies of `wasm_store.c` are now `rust/runtime/src/wasm_store.rs`; `wasm_store.c` is in `ported.txt`. The only C left in the build is `runtime/c/lexer_log.c` (ADR-012). Harness: 13143 compared, 0 mismatches.

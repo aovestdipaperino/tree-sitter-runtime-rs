@@ -25,3 +25,4 @@ pub mod subtree;
 pub mod tree;
 pub mod tree_cursor;
 pub mod unicode;
+pub mod wasm_store;
