@@ -21,27 +21,7 @@ const POINT_MAX: TSPoint = TSPoint {
     column: u32::MAX,
 };
 
-// TEMP STUB: the real `ts_query__step_is_fallible` is ported in `query_parse.rs` (C line 3371);
-// replace this with `use crate::query_parse::query_step_is_fallible;` when merging.
-pub unsafe fn query_step_is_fallible(this: *const TSQuery, step_index: u16) -> bool {
-    unsafe {
-        let mut i = 1u32;
-        let step = (*this).steps.get(u32::from(step_index));
-        let mut next_step;
-        loop {
-            crate::ts_assert!(u32::from(step_index) + i < (*this).steps.size);
-            next_step = (*this).steps.get(u32::from(step_index) + i);
-            i += 1;
-            if !(*next_step).is_pass_through {
-                break;
-            }
-        }
-        (*next_step).depth != PATTERN_DONE_MARKER
-            && ((*next_step).depth > (*step).depth
-                || ((*next_step).depth == (*step).depth && (*next_step).is_immediate))
-            && (!(*next_step).parent_pattern_guaranteed || (*step).symbol == WILDCARD_SYMBOL)
-    }
-}
+use crate::query_parse::query_step_is_fallible;
 
 // ---- QueryCursor ----
 

@@ -16,11 +16,7 @@ unsafe extern "C" {
     fn strncmp(a: *const c_char, b: *const c_char, n: usize) -> core::ffi::c_int;
 }
 
-// TEMP STUB: the real `query_analyze_patterns` lives in `query_analysis.rs` (another fork). On
-// integration, delete this function and add `use crate::query_analysis::query_analyze_patterns;`.
-unsafe fn query_analyze_patterns(_this: *mut TSQuery, _error_offset: *mut u32) -> bool {
-    true
-}
+use crate::query_analysis::query_analyze_patterns;
 
 unsafe fn query_add_negated_fields(
     this: *mut TSQuery,

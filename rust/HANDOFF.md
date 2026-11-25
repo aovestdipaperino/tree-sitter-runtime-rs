@@ -101,8 +101,23 @@ Verified by the harness, whose tree dump now also records, for the first 150 nod
 parent, siblings, children, first-child-for-byte, descendant-for-range (byte and point), every
 field id, field names, `child_with_descendant` and `ts_node_edit`. 10 of 10 seeded mutations caught.
 
+## query.c (ported, 2026-11-25)
+Split over `query.rs` (types and helpers, written first), `query_analysis.rs`, `query_parse.rs` and
+`query_cursor.rs` (the last three written in parallel by forked agents in git worktrees, then merged).
+Query structs are Rust-layout (no C unit sees them); C bitfields are plain fields with explicit masks
+(`CONSUMED_CAPTURE_COUNT_MASK` etc.). Verified only by the harness: 2468 queries compiled, 1076
+rejected (error type and offset compared), 449k match/capture records, 17 cursor modes (match limit,
+byte/point ranges, containing ranges, max start depth, remove_match, next_capture order, progress
+callback, disabled capture/pattern). Harness queries: fixed list, generated from the grammar's node
+and field names, and upstream highlights/tags/locals files in `harness/queries/`.
+Mutations not caught, judged equivalent or out of reach: `should_descend` pruning comparisons (perf
+only, the real start check is stricter), capture-order tie comparisons, `capture_list_pool_is_empty`
+`>=`/`>` and `MAX_ANALYSIS_ITERATION_COUNT` (needs a pathological query).
+Not covered: `ts_query_copy` (harness bindings are still 0.26; comes back with the binding fork).
+
 ## Next
-`query.c` (last; 4,000+ lines), lib.c/atomic.h/wasm stubs; then the binding fork and tokensave test.
+lib.c/atomic.h, wasm stubs (tiny), then the binding fork + tokensave test, then rust-anything
+front-door/wire/lift as feasible. Medium/large grammar tiers after the runtime.
 
 ## Open questions for the user
 - None open. ADR-011 and the v0.27.2 baseline were confirmed; the repo is public.

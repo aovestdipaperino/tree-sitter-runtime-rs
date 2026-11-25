@@ -180,13 +180,21 @@ unsafe fn gen_queries(lang: *const c_void, rng: &mut Rng, count: usize) -> Vec<S
     let mut names: Vec<String> = Vec::new();
     for sym in 0..n {
         if rt::ts_language_symbol_type(l, sym as u16) == 0 {
-            names.push(CStr::from_ptr(rt::ts_language_symbol_name(l, sym as u16)).to_string_lossy().into_owned());
+            names.push(
+                CStr::from_ptr(rt::ts_language_symbol_name(l, sym as u16))
+                    .to_string_lossy()
+                    .into_owned(),
+            );
         }
     }
     let fc = rt::ts_language_field_count(l);
     let mut fields: Vec<String> = Vec::new();
     for f in 1..=fc {
-        fields.push(CStr::from_ptr(rt::ts_language_field_name_for_id(l, f as u16)).to_string_lossy().into_owned());
+        fields.push(
+            CStr::from_ptr(rt::ts_language_field_name_for_id(l, f as u16))
+                .to_string_lossy()
+                .into_owned(),
+        );
     }
     let mut out = Vec::new();
     if names.is_empty() {
@@ -196,8 +204,27 @@ unsafe fn gen_queries(lang: *const c_void, rng: &mut Rng, count: usize) -> Vec<S
         let a = &names[rng.below(names.len())];
         let b = &names[rng.below(names.len())];
         let c = &names[rng.below(names.len())];
-        let f = if fields.is_empty() { "body".to_string() } else { fields[rng.below(fields.len())].clone() };
-        let t = match rng.below(16) {
+        let f = if fields.is_empty() {
+            "body".to_string()
+        } else {
+            fields[rng.below(fields.len())].clone()
+        };
+        let negated: String = (0..10)
+            .map(|i| {
+                format!(
+                    " !{}",
+                    fields
+                        .get(i % fields.len().max(1))
+                        .map_or("body", |f| f.as_str())
+                )
+            })
+            .collect();
+        let t = match rng.below(21) {
+            16 => format!("({a} ({b})? . ({c}) @z)"),
+            17 => format!("({a} ({b})* . ({c}) @z)"),
+            18 => format!("({a} . ({b})? . ({c}) @z)"),
+            19 => format!("({a}{negated})"),
+            20 => format!("({a} ({b})+ . ({c})? @z .)"),
             0 => format!("({a}) @x"),
             1 => format!("({a} ({b}) @y)"),
             2 => format!("({a} ({b})* @y . ({c}) @z)"),
@@ -221,16 +248,26 @@ unsafe fn gen_queries(lang: *const c_void, rng: &mut Rng, count: usize) -> Vec<S
 }
 
 fn query_files(name: &str) -> Vec<String> {
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("queries").join(name);
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("queries")
+        .join(name);
     let mut out = Vec::new();
-    let Ok(rd) = fs::read_dir(&dir) else { return out };
+    let Ok(rd) = fs::read_dir(&dir) else {
+        return out;
+    };
     let mut paths: Vec<_> = rd.filter_map(|e| e.ok()).map(|e| e.path()).collect();
     paths.sort();
     for p in paths {
-        let Ok(text) = fs::read_to_string(&p) else { continue };
+        let Ok(text) = fs::read_to_string(&p) else {
+            continue;
+        };
         out.push(text.clone());
         // and the top-level blocks one at a time (blank-line separated), capped
-        for block in text.split("\n\n").filter(|b| b.contains('(') || b.contains('"')).take(40) {
+        for block in text
+            .split("\n\n")
+            .filter(|b| b.contains('(') || b.contains('"'))
+            .take(40)
+        {
             out.push(block.to_string());
         }
     }
@@ -304,20 +341,27 @@ fn main() -> ExitCode {
                 // queries: compile, describe and run over the parsed tree
                 if idx < 4 {
                     let mut qs: Vec<String> = FIXED_QUERIES.iter().map(|q| q.to_string()).collect();
-                    qs.extend(gen_queries(lang, &mut rng, 24));
+                    qs.extend(gen_queries(lang, &mut rng, 48));
                     qs.extend(query_files(name));
                     let (mut sa, mut sb) = (rt::Session::new(lang), rf::Session::new(lang));
                     sa.parse(text, 0, text.len().max(1), false);
                     sb.parse(text, 0, text.len().max(1), false);
                     for (qi, q) in qs.iter().enumerate() {
-                        let a = (sa.query_report(lang as *const rt::TSLanguage, q), Vec::new());
-                        let b = (sb.query_report(lang as *const rf::TSLanguage, q), Vec::new());
+                        let a = (
+                            sa.query_report(lang as *const rt::TSLanguage, q),
+                            Vec::new(),
+                        );
+                        let b = (
+                            sb.query_report(lang as *const rf::TSLanguage, q),
+                            Vec::new(),
+                        );
                         stats.check("query", name, idx * 10_000 + qi, &a, &b);
                         if a.0.starts_with("ERR") {
                             stats.query_err += 1;
                         } else {
                             stats.query_ok += 1;
-                            stats.query_matches += a.0.matches("match id=").count() + a.0.matches("cap id=").count();
+                            stats.query_matches +=
+                                a.0.matches("match id=").count() + a.0.matches("cap id=").count();
                         }
                     }
                 }
@@ -411,7 +455,10 @@ fn main() -> ExitCode {
         );
     }
     println!("--");
-    println!("queries: {} compiled, {} rejected, {} match/capture records", stats.query_ok, stats.query_err, stats.query_matches);
+    println!(
+        "queries: {} compiled, {} rejected, {} match/capture records",
+        stats.query_ok, stats.query_err, stats.query_matches
+    );
     for (k, (n, bad)) in &stats.by_kind {
         println!("  {k:<16} {n:>6} compared, {bad} mismatches");
     }

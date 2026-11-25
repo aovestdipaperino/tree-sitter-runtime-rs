@@ -147,6 +147,18 @@ impl Session {
     }
 }
 
+struct QCancel {
+    calls: u32,
+    seen: Vec<u32>,
+}
+
+unsafe extern "C" fn qprogress_cb(state: *mut TSQueryCursorState) -> bool {
+    let c = &mut *((*state).payload as *mut QCancel);
+    c.seen.push((*state).current_byte_offset);
+    c.calls += 1;
+    c.calls >= 3
+}
+
 /// Run one cursor to exhaustion, in match or capture order, returning a text record.
 unsafe fn run_cursor(q: *const TSQuery, root: TSNode, mode: u32) -> String {
     let c = ts_query_cursor_new();
@@ -158,11 +170,47 @@ unsafe fn run_cursor(q: *const TSQuery, root: TSNode, mode: u32) -> String {
             let _ = writeln!(out, "byte_range={}", ts_query_cursor_set_byte_range(c, a, b) as u8);
         }
         3 => ts_query_cursor_set_max_start_depth(c, 2),
+        7 => ts_query_cursor_set_match_limit(c, 1),
+        14 => {
+            let m = (ts_node_start_byte(root) + ts_node_end_byte(root)) / 2;
+            let _ = writeln!(out, "empty_range={}", ts_query_cursor_set_byte_range(c, m, m) as u8);
+        }
+        15 => {
+            let (a, b) = (ts_node_start_byte(root) + 9, ts_node_start_byte(root) + 2);
+            let _ = writeln!(out, "reversed={}", ts_query_cursor_set_byte_range(c, a, b) as u8);
+            let _ = writeln!(out, "reversed_contain={}", ts_query_cursor_set_containing_byte_range(c, a, b) as u8);
+        }
+        8 => ts_query_cursor_set_match_limit(c, 2),
+        9 => ts_query_cursor_set_max_start_depth(c, 0),
+        10 => ts_query_cursor_set_max_start_depth(c, 1),
+        11 => ts_query_cursor_set_max_start_depth(c, 3),
+        12 => {
+            let (sp, ep) = (ts_node_start_point(root), ts_node_end_point(root));
+            let r = ts_query_cursor_set_point_range(c, TSPoint { row: sp.row + 1, column: 0 }, TSPoint { row: ep.row.saturating_sub(1), column: 0 });
+            let _ = writeln!(out, "point_range={}", r as u8);
+        }
+        13 => {
+            let (sp, ep) = (ts_node_start_point(root), ts_node_end_point(root));
+            let r = ts_query_cursor_set_containing_point_range(c, TSPoint { row: sp.row, column: 2 }, TSPoint { row: ep.row.saturating_sub(1), column: 1 });
+            let _ = writeln!(out, "contain_point={}", r as u8);
+        }
         4 => {
             let (a, b) = (ts_node_start_byte(root) + 3, ts_node_end_byte(root).saturating_sub(3));
             let _ = writeln!(out, "contain={}", ts_query_cursor_set_containing_byte_range(c, a, b) as u8);
         }
         _ => {}
+    }
+    if mode == 16 {
+        let mut cancel = QCancel { calls: 0, seen: Vec::new() };
+        let opts = TSQueryCursorOptions { payload: &mut cancel as *mut QCancel as *mut c_void, progress_callback: Some(qprogress_cb) };
+        ts_query_cursor_exec_with_options(c, q, root, &opts);
+        let mut m: TSQueryMatch = core::mem::zeroed();
+        while ts_query_cursor_next_match(c, &mut m) {
+            let _ = writeln!(out, "match id={} pat={} n={}", m.id, m.pattern_index, m.capture_count);
+        }
+        let _ = writeln!(out, "progress seen={:?}", cancel.seen);
+        ts_query_cursor_delete(c);
+        return out;
     }
     ts_query_cursor_exec(c, q, root);
     let mut m: TSQueryMatch = core::mem::zeroed();
@@ -239,7 +287,7 @@ impl Session {
         }
         if !self.tree.is_null() {
             let root = ts_tree_root_node(self.tree);
-            for mode in 0..7u32 {
+            for mode in 0..17u32 {
                 let _ = writeln!(out, "-- mode {mode}");
                 out.push_str(&run_cursor(q, root, mode));
             }
