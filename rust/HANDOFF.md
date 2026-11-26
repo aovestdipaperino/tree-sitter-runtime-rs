@@ -130,3 +130,11 @@ oracle. Rebased to v0.27.2 (ADR-013). TODO: Rust `write_to_string` is recursive 
 ## lib.c, atomic.h and the wasm stubs
 
 `lib.c` is an amalgamation file the build never compiled, and no remaining C includes `atomic.h` (subtree.rs uses `core::sync::atomic`), so neither needed code. The 14 no-wasm dummies of `wasm_store.c` are now `rust/runtime/src/wasm_store.rs`; `wasm_store.c` is in `ported.txt`. The only C left in the build is `runtime/c/lexer_log.c` (ADR-012). Harness: 13143 compared, 0 mismatches.
+
+## Binding fork and the tokensave test
+
+`rust/binding` is the published `tree-sitter` 0.27.2 `binding_rust` (lib.rs, ffi.rs, bindings.rs, util.rs, wasm_*.rs) as a crate named `tree-sitter`, depending on `tree-sitter-runtime-rs` instead of building the C library. Differences from upstream: no `cc` build (`build.rs` only copies `stdlib-symbols.txt`), `extern crate tree_sitter_runtime_rs;` in lib.rs, `PARSER_HEADER` includes `../../../src/parser.h`, the `wasm` feature is an empty placeholder (ADR-003), no `links`. Smoke tests in `binding/tests/smoke.rs` (parse, edit, changed ranges, query).
+
+Use it from another project with `[patch.crates-io] tree-sitter = { path = ".../rust/binding" }`; the semver must match, so tokensave (on `tree-sitter = "0.26"`) needs `"0.27"` and two `child_count()` call sites cast to `usize` (batch_extractor.rs:23, cobol_extractor.rs:413). Tested on a `git archive` copy of tokensave HEAD in the scratchpad (the working tree was untouched): release build succeeds, `cargo test --release --tests` all pass (lib 1077, a 3088-test suite, the rest green), zero failures.
+
+Not done: the harness's own Rust-side bindings are still the 0.26 generation, so `ts_query_copy` stays uncovered; switch the harness to the `tree-sitter` fork to close it.
