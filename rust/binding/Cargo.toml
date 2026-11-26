@@ -1,0 +1,36 @@
+[package]
+name = "tree-sitter"
+version = "0.27.2"
+authors = ["Enzo Lombardi <enzinol@gmail.com>"]
+edition = "2024"
+rust-version = "1.90"
+description = "The upstream tree-sitter Rust bindings (v0.27.2), linked against the pure Rust runtime instead of the C library"
+license = "MIT"
+repository = "https://github.com/aovestdipaperino/tree-sitter-runtime-rs"
+readme = "src/README.md"
+build = "build.rs"
+publish = false
+
+[lib]
+name = "tree_sitter"
+path = "src/lib.rs"
+
+[features]
+default = ["std"]
+std = ["regex/std", "regex/perf"]
+# The wasm store is not ported (ADR-003); the feature exists so manifests that name it still resolve.
+wasm = []
+bindgen = []
+
+[dependencies]
+regex = { version = "1.12.3", default-features = false, features = ["unicode"] }
+streaming-iterator = "0.1.9"
+tree-sitter-language = "0.1.9"
+tree-sitter-runtime-rs = { path = "../runtime" }
+
+[lints.rust]
+mismatched_lifetime_syntaxes = "allow"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(docsrs)"] }
+
+[dev-dependencies]
+tree-sitter-lite-rs = "0.1"
