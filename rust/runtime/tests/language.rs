@@ -1,5 +1,6 @@
 //! `language.c` and the helpers of `language.h` against the C originals, on every state and symbol
 //! of the real grammars shipped by tree-sitter-lite-rs.
+#![cfg(feature = "reference")]
 use core::ffi::{CStr, c_char};
 use tree_sitter_runtime_rs::{api::*, language::*, parser_abi::*};
 

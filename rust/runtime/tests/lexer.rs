@@ -1,6 +1,7 @@
 //! The Rust lexer against the C lexer (src/lexer.c compiled with renamed symbols), driven by the
 //! same random scripts. After every step the complete lexer state, the values the operations
 //! return, and every log message must be identical.
+#![cfg(feature = "reference")]
 use core::ffi::{CStr, c_char, c_void};
 use std::mem::MaybeUninit;
 use tree_sitter_runtime_rs::{api::*, length::Length, lexer::*};

@@ -1,4 +1,5 @@
 //! The Rust mirrors of the C structs must have the C layout (ADR-011).
+#![cfg(feature = "reference")]
 use core::mem::{align_of, offset_of, size_of};
 use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};

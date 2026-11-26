@@ -57,3 +57,6 @@ State: `lexer.c`, `language.c`, `subtree.c`, `stack.c`, `tree.c`, `tree_cursor.c
 1. After wave 0 and 1 (leaf modules) and the differential harness.
 2. After the lexer and language, and the tangled core.
 3. After node and cursor. 4. After queries.
+
+
+Lift done by hand (see HANDOFF.md, "Lift"): the C reference is behind the `reference` feature; the shipped crate builds only `runtime/c/lexer_log.c`.

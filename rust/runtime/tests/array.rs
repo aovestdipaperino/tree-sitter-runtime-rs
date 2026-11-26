@@ -1,5 +1,6 @@
 //! `array.h` and `reduce_action.h`: random operation scripts run on the Rust `Array` and on the
 //! C `_array__*` helpers side by side; size, capacity and contents must agree after every step.
+#![cfg(feature = "reference")]
 use core::ffi::c_void;
 use tree_sitter_runtime_rs::{array::*, reduce_action::*};
 

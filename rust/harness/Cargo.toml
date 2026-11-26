@@ -6,7 +6,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-tree-sitter-runtime-rs = { path = "../runtime" }
+tree-sitter-runtime-rs = { path = "../runtime", features = ["reference"] }
 tree-sitter-lite-rs = "0.1"
 tree-sitter-language = "0.1"
 

@@ -1,6 +1,7 @@
 //! The tree cursor port against the C original (src/tree_cursor.c, renamed), walking real parse
 //! trees of several grammars at random. After every step the whole cursor state (its stack), the
 //! current node, depth, descendant index, field, parent node and query-status facts must agree.
+#![cfg(feature = "reference")]
 mod common;
 use core::ffi::{CStr, c_char, c_void};
 use tree_sitter_runtime_rs::{api::*, tree_cursor::*};

@@ -1,6 +1,7 @@
 //! The tree port against the C original (src/tree.c compiled with renamed symbols), on trees
 //! produced by the real parser: copy, edit, included ranges, root nodes, changed ranges and the
 //! dot-graph output must agree.
+#![cfg(feature = "reference")]
 mod common;
 use common::*;
 use core::ffi::{CStr, c_char, c_int, c_void};

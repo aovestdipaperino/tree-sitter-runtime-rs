@@ -1,4 +1,5 @@
 //! The Rust ports of the header helpers and `ts_point_edit` against the C originals.
+#![cfg(feature = "reference")]
 use tree_sitter_runtime_rs::{api::*, length::*, point::*};
 
 unsafe extern "C" {

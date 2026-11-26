@@ -8,6 +8,11 @@ license = "MIT"
 repository = "https://github.com/aovestdipaperino/tree-sitter-runtime-rs"
 publish = false
 
+[features]
+# Builds the renamed C reference (needs `patch` and the repo's `src/`) that the tests and the
+# harness compare against. Off for consumers: the shipped crate is Rust plus one 15-line C shim.
+reference = []
+
 [lib]
 crate-type = ["rlib", "staticlib"]
 

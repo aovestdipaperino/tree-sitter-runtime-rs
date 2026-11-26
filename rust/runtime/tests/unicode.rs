@@ -1,5 +1,6 @@
 //! The Rust decoders against the C header versions (`ts_decode_*`), compared on consumed bytes
 //! and code point for every buffer length.
+#![cfg(feature = "reference")]
 use tree_sitter_runtime_rs::unicode::*;
 
 unsafe extern "C" {

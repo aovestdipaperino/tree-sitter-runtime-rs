@@ -3,6 +3,7 @@
 //! Random operation scripts run in lockstep on both stacks; after every step every observable
 //! property of every version, and everything the operation returned, must be identical. The C
 //! stack is fed subtrees from the C subtree implementation, the Rust stack from the Rust one.
+#![cfg(feature = "reference")]
 mod common;
 use common::*;
 use core::ffi::{c_char, c_int, c_void};

@@ -1,5 +1,6 @@
 //! `ts_range_edit` and the range-array helpers against the C originals (renamed in the shim).
 //! The tree-level changed-ranges comparison lives in tests/tree.rs.
+#![cfg(feature = "reference")]
 mod common;
 use common::Rng;
 use tree_sitter_runtime_rs::{api::*, array::Array, get_changed_ranges::*};

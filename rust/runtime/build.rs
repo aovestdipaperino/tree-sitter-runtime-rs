@@ -1,8 +1,6 @@
-//! Builds the C units that are not ported yet, each as its own object (ADR-011), with the flags
-//! the upstream `tree-sitter` crate uses. `ported.txt` lists the units whose symbols now come
-//! from Rust.
+//! Builds the one piece of C that remains, the variadic `TSLexer.log` shim (ADR-012), and, only
+//! with the `reference` feature, the renamed C reference that the tests compare against.
 use std::{
-    collections::HashSet,
     env, fs,
     path::{Path, PathBuf},
     process::Command,
@@ -54,18 +52,7 @@ fn copy_dir(from: &Path, to: &Path) {
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let root = manifest.join("../..");
-    let src = root.join("src");
     let include = root.join("include");
-
-    let ported_list = manifest.join("ported.txt");
-    println!("cargo::rerun-if-changed={}", ported_list.display());
-    let ported: HashSet<String> = fs::read_to_string(&ported_list)
-        .unwrap()
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .map(String::from)
-        .collect();
 
     let mut build = cc::Build::new();
     build
@@ -73,39 +60,22 @@ fn main() {
         .flag_if_supported("-fvisibility=hidden")
         .flag_if_supported("-Wno-unused-parameter")
         .flag_if_supported("-Wno-incompatible-pointer-types")
-        .include(&src)
-        .include(&include)
+        .include(manifest.join("c/include"))
         .define("_POSIX_C_SOURCE", "200112L")
         .define("_DEFAULT_SOURCE", None)
         .define("_BSD_SOURCE", None)
         .define("_DARWIN_C_SOURCE", None)
         .warnings(false);
-
-    let mut files: Vec<_> = fs::read_dir(&src)
-        .unwrap()
-        .map(|e| e.unwrap().file_name().into_string().unwrap())
-        .filter(|n| n.ends_with(".c") && n != "lib.c" && !ported.contains(n))
-        .collect();
-    files.sort();
-    for f in &files {
-        println!("cargo::rerun-if-changed={}", src.join(f).display());
-        build.file(src.join(f));
+    for file in ["c/lexer_log.c", "c/include/parser.h"] {
+        println!("cargo::rerun-if-changed={}", manifest.join(file).display());
     }
-    for entry in fs::read_dir(&src).unwrap() {
-        println!(
-            "cargo::rerun-if-changed={}",
-            entry.unwrap().path().display()
-        );
-    }
-    // C that has no Rust form yet (variadic functions): see c/lexer_log.c.
-    let extra = manifest.join("c");
-    for e in fs::read_dir(&extra).unwrap() {
-        let p = e.unwrap().path();
-        println!("cargo::rerun-if-changed={}", p.display());
-        build.file(p);
-    }
+    build.file(manifest.join("c/lexer_log.c"));
     build.compile("tree-sitter-c-units");
 
+    // Everything below is for the tests: the C original of each ported unit, symbols renamed.
+    if env::var_os("CARGO_FEATURE_REFERENCE").is_none() {
+        return;
+    }
     // Test shims (layout and header-only helpers); tiny, and dead-stripped from real binaries.
     let ref_src = patched_reference_src(&root, &PathBuf::from(env::var("OUT_DIR").unwrap()));
     let shim = manifest.join("shim");

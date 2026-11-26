@@ -142,3 +142,9 @@ The harness bindings are now the 0.27.2 `bindings.rs` (root `binding_rust/bindin
 ## write_to_string is iterative
 
 `subtree.rs::write_to_string` now uses an explicit `WriteFrame` stack like the C `WriteToStringFrame`, so printing a deep tree no longer recurses. `binding/tests/smoke.rs::deep_tree_sexp_does_not_overflow_a_small_stack` prints a 20000-deep tree on a 256 KiB stack: it aborts with a stack overflow on the old recursive version and passes now. Harness 13143/0.
+
+## Lift: the shipped crate is Rust plus one C shim
+
+rust-anything's front-door/wire/lift does not apply (ADR-007: 0 bridgeable exports, no unit crates, no fallback path to remove), so the lift was done by hand. `ported.txt` is gone: nothing in `src/` is compiled any more. `runtime/build.rs` now builds only `runtime/c/lexer_log.c` (with its own copy of `parser.h` in `runtime/c/include/`). The renamed C reference, its test shims, the `patch` step and the root `src/` are behind the `reference` cargo feature (off by default), which the harness enables and which the integration tests need (`cargo test -p tree-sitter-runtime-rs --features reference`; each test file is `#![cfg(feature = "reference")]`). Before this, every consumer linked the shim static library and needed `patch` and `src/`. Verified: `cargo test -p tree-sitter` (binding, no reference), tests with the feature, clippy with and without it, harness 13143/0, tokensave scratch copy 1077 lib tests.
+
+Remaining for a publishable crate: the binding crate still reaches `../../../src/parser.h` and `../../src/wasm/stdlib-symbols.txt` (fine in the repo, must be vendored for `cargo package`), and the runtime has no README or crates.io metadata.

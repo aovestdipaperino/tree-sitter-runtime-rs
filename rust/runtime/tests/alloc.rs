@@ -1,6 +1,7 @@
 //! The Rust allocator unit against the C original (renamed in the shim).
 //!
 //! The hooks are process-global, so everything runs in one test.
+#![cfg(feature = "reference")]
 use core::ffi::c_void;
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use tree_sitter_runtime_rs::alloc::*;

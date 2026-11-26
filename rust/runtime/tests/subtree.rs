@@ -4,6 +4,7 @@
 //!    bitfields hold, for random data.
 //! 2. Random operation scripts run in lockstep on both implementations; after every step the full
 //!    observable state of every live tree (through the C header's accessors) must be identical.
+#![cfg(feature = "reference")]
 use core::ffi::{CStr, c_char, c_int, c_void};
 mod common;
 use common::*;
