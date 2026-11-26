@@ -152,3 +152,9 @@ Remaining for a publishable crate: the binding crate still reaches `../../../src
 ## Publish prep
 
 Binding: `parser.h` is vendored as `binding/src/parser.h` and `stdlib-symbols.txt` as `binding/data/`, so it no longer reaches outside its directory. Runtime: version 0.1.0, README, LICENSE (upstream MIT), keywords/categories, `rust-version`, `include` list (src, c, build.rs only: no reference, no tests). `cargo package -p tree-sitter-runtime-rs` packages 34 files (635 KiB) and its verify build passes. Both crates still say `publish = false`: publishing is the user's call. The binding is named `tree-sitter`, which is upstream's crate, so it can only be consumed by git or path through `[patch.crates-io]`, never published under that name.
+
+## State and what to do next
+
+Everything planned for the runtime is done: all units ported, harness 13143/0 against v0.27.2 plus patch 0001, binding fork, tokensave test, lift, and `tree-sitter-runtime-rs` 0.1.0 published on crates.io (tag `runtime-v0.1.0`). The logo is in the GitHub READMEs only; the user chose not to publish 0.1.1 for it.
+
+Upstream master (checked 2026-11-26, commit 76918fa) is 53 `lib/` commits and about 1,750 changed lines past v0.27.2: `Length` field reorder, skipped-character error cost, a dozen reuse fixes, UTF-16 surrogate decoding, query-cursor accounting, format-string checks on `TSLexer.log`. Decision (user, "go with your recommendations"): do not rebase onto master. When upstream tags the next release, supersede ADR-013 with a new ADR, copy that tag's `lib/src` and `lib/include` over `src/` and `include/`, and port the changes unit by unit with the harness as the judge (include the `Length` layout in `shim/layout.c` and `tests/layout.rs`), then publish a new runtime version. Optional meanwhile: cherry-pick single correctness fixes as patches under `rust/patches/` plus the matching Rust change.
