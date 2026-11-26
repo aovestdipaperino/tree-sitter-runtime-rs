@@ -11,7 +11,6 @@ include = ["/src/**", "/c/**", "/build.rs", "/Cargo.toml", "/README.md", "/LICEN
 rust-version = "1.90"
 license = "MIT"
 repository = "https://github.com/aovestdipaperino/tree-sitter-runtime-rs"
-publish = false
 
 [features]
 # Builds the renamed C reference (needs `patch` and the repo's `src/`) that the tests and the
