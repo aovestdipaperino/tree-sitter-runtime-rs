@@ -53,3 +53,28 @@ fn query_and_copy() {
 fn version_and_abi() {
     assert!(js().abi_version() >= 13);
 }
+
+#[test]
+fn deep_tree_sexp_does_not_overflow_a_small_stack() {
+    let depth = 20_000;
+    let src = format!("{}1{};", "(".repeat(depth), ")".repeat(depth));
+    let expected_len = {
+        let mut parser = Parser::new();
+        parser.set_language(&js()).unwrap();
+        let tree = parser.parse(&src, None).unwrap();
+        tree.root_node().to_sexp().len()
+    };
+    assert!(expected_len > depth * 20);
+    // `to_sexp` runs on a thread with a 256 KiB stack: a recursive printer would overflow it.
+    std::thread::Builder::new()
+        .stack_size(256 * 1024)
+        .spawn(move || {
+            let mut parser = Parser::new();
+            parser.set_language(&js()).unwrap();
+            let tree = parser.parse(&src, None).unwrap();
+            assert_eq!(tree.root_node().to_sexp().len(), expected_len);
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+}

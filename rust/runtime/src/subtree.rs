@@ -1571,7 +1571,47 @@ fn write_char(out: &mut Vec<u8>, chr: i32) {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+/// One node being printed. The C keeps these on a heap stack too (`WriteToStringFrame`), so a deep
+/// tree cannot overflow the call stack.
+struct WriteFrame {
+    subtree: Subtree,
+    alias_symbol: TSSymbol,
+    alias_is_named: bool,
+    field_name: FieldName,
+    is_root: bool,
+    pre_written: bool,
+    is_visible: bool,
+    alias_sequence: *const TSSymbol,
+    field_map: *const TSFieldMapEntry,
+    field_map_end: *const TSFieldMapEntry,
+    child_index: u32,
+    structural_child_index: u32,
+}
+
+impl WriteFrame {
+    fn new(
+        subtree: Subtree,
+        alias_symbol: TSSymbol,
+        alias_is_named: bool,
+        field_name: FieldName,
+    ) -> Self {
+        WriteFrame {
+            subtree,
+            alias_symbol,
+            alias_is_named,
+            field_name,
+            is_root: matches!(field_name, FieldName::Root),
+            pre_written: false,
+            is_visible: false,
+            alias_sequence: ptr::null(),
+            field_map: ptr::null(),
+            field_map_end: ptr::null(),
+            child_index: 0,
+            structural_child_index: 0,
+        }
+    }
+}
+
 unsafe fn write_to_string(
     this: Subtree,
     out: &mut Vec<u8>,
@@ -1582,111 +1622,132 @@ unsafe fn write_to_string(
     field_name: FieldName,
 ) {
     unsafe {
-        if this.ptr.is_null() {
-            out.extend_from_slice(b"(NULL)");
-            return;
-        }
-
-        let is_root = matches!(field_name, FieldName::Root);
-        let is_visible = include_all
-            || ts_subtree_missing(this)
-            || (if alias_symbol != 0 {
-                alias_is_named
-            } else {
-                ts_subtree_visible(this) && ts_subtree_named(this)
-            });
-
-        if is_visible {
-            if !is_root {
-                out.push(b' ');
-                if let FieldName::Named(name) = field_name {
-                    out.extend_from_slice(&cstr_or_null(name));
-                    out.extend_from_slice(b": ");
-                }
-            }
-
-            if ts_subtree_is_error(this)
-                && ts_subtree_child_count(this) == 0
-                && (*this.ptr).size.bytes > 0
-            {
-                out.extend_from_slice(b"(UNEXPECTED ");
-                write_char(out, (*this.ptr).u.lookahead_char);
-            } else {
-                let symbol = if alias_symbol != 0 {
-                    alias_symbol
-                } else {
-                    ts_subtree_symbol(this)
-                };
-                let symbol_name = cstr_or_null(ts_language_symbol_name(language, symbol));
-                if ts_subtree_missing(this) {
-                    out.extend_from_slice(b"(MISSING ");
-                    if alias_is_named || ts_subtree_named(this) {
-                        out.extend_from_slice(&symbol_name);
-                    } else {
-                        out.push(b'"');
-                        out.extend_from_slice(&symbol_name);
-                        out.push(b'"');
+        let mut stack = vec![WriteFrame::new(
+            this,
+            alias_symbol,
+            alias_is_named,
+            field_name,
+        )];
+        while let Some(frame) = stack.last_mut() {
+            let node = frame.subtree;
+            if node.ptr.is_null() {
+                if !frame.is_root {
+                    out.push(b' ');
+                    if let FieldName::Named(name) = frame.field_name {
+                        out.extend_from_slice(&cstr_or_null(name));
+                        out.extend_from_slice(b": ");
                     }
-                } else {
-                    out.push(b'(');
-                    out.extend_from_slice(&symbol_name);
                 }
+                out.extend_from_slice(b"(NULL)");
+                stack.pop();
+                continue;
             }
-        } else if is_root {
-            let symbol = if alias_symbol != 0 {
-                alias_symbol
-            } else {
-                ts_subtree_symbol(this)
-            };
-            let symbol_name = cstr_or_null(ts_language_symbol_name(language, symbol));
-            if ts_subtree_child_count(this) > 0 {
-                out.push(b'(');
-                out.extend_from_slice(&symbol_name);
-            } else if ts_subtree_named(this) {
-                out.push(b'(');
-                out.extend_from_slice(&symbol_name);
-                out.push(b')');
-            } else {
-                out.extend_from_slice(b"(\"");
-                out.extend_from_slice(&symbol_name);
-                out.extend_from_slice(b"\")");
+
+            if !frame.pre_written {
+                let is_visible = include_all
+                    || ts_subtree_missing(node)
+                    || (if frame.alias_symbol != 0 {
+                        frame.alias_is_named
+                    } else {
+                        ts_subtree_visible(node) && ts_subtree_named(node)
+                    });
+
+                if is_visible {
+                    if !frame.is_root {
+                        out.push(b' ');
+                        if let FieldName::Named(name) = frame.field_name {
+                            out.extend_from_slice(&cstr_or_null(name));
+                            out.extend_from_slice(b": ");
+                        }
+                    }
+
+                    if ts_subtree_is_error(node)
+                        && ts_subtree_child_count(node) == 0
+                        && (*node.ptr).size.bytes > 0
+                    {
+                        out.extend_from_slice(b"(UNEXPECTED ");
+                        write_char(out, (*node.ptr).u.lookahead_char);
+                    } else {
+                        let symbol = if frame.alias_symbol != 0 {
+                            frame.alias_symbol
+                        } else {
+                            ts_subtree_symbol(node)
+                        };
+                        let symbol_name = cstr_or_null(ts_language_symbol_name(language, symbol));
+                        if ts_subtree_missing(node) {
+                            out.extend_from_slice(b"(MISSING ");
+                            if frame.alias_is_named || ts_subtree_named(node) {
+                                out.extend_from_slice(&symbol_name);
+                            } else {
+                                out.push(b'"');
+                                out.extend_from_slice(&symbol_name);
+                                out.push(b'"');
+                            }
+                        } else {
+                            out.push(b'(');
+                            out.extend_from_slice(&symbol_name);
+                        }
+                    }
+                } else if frame.is_root {
+                    let symbol = if frame.alias_symbol != 0 {
+                        frame.alias_symbol
+                    } else {
+                        ts_subtree_symbol(node)
+                    };
+                    let symbol_name = cstr_or_null(ts_language_symbol_name(language, symbol));
+                    if ts_subtree_child_count(node) > 0 {
+                        out.push(b'(');
+                        out.extend_from_slice(&symbol_name);
+                    } else if ts_subtree_named(node) {
+                        out.push(b'(');
+                        out.extend_from_slice(&symbol_name);
+                        out.push(b')');
+                    } else {
+                        out.extend_from_slice(b"(\"");
+                        out.extend_from_slice(&symbol_name);
+                        out.extend_from_slice(b"\")");
+                    }
+                }
+
+                if ts_subtree_child_count(node) != 0 {
+                    let production_id = u32::from((*node.ptr).u.node.production_id);
+                    frame.alias_sequence = ts_language_alias_sequence(language, production_id);
+                    ts_language_field_map(
+                        language,
+                        production_id,
+                        &mut frame.field_map,
+                        &mut frame.field_map_end,
+                    );
+                }
+                frame.is_visible = is_visible;
+                frame.pre_written = true;
             }
-        }
 
-        if ts_subtree_child_count(this) != 0 {
-            let production_id = u32::from((*this.ptr).u.node.production_id);
-            let alias_sequence = ts_language_alias_sequence(language, production_id);
-            let mut field_map: *const TSFieldMapEntry = ptr::null();
-            let mut field_map_end: *const TSFieldMapEntry = ptr::null();
-            ts_language_field_map(language, production_id, &mut field_map, &mut field_map_end);
-
-            let mut structural_child_index = 0u32;
-            for i in 0..(*this.ptr).child_count {
-                let child = *ts_subtree_children(this).add(i as usize);
+            if ts_subtree_child_count(node) != 0 && frame.child_index < (*node.ptr).child_count {
+                let child = *ts_subtree_children(node).add(frame.child_index as usize);
+                frame.child_index += 1;
                 if ts_subtree_extra(child) {
-                    write_to_string(child, out, language, include_all, 0, false, FieldName::None);
+                    stack.push(WriteFrame::new(child, 0, false, FieldName::None));
                 } else {
-                    let subtree_alias_symbol = if alias_sequence.is_null() {
+                    let structural = frame.structural_child_index;
+                    let child_alias = if frame.alias_sequence.is_null() {
                         0
                     } else {
-                        *alias_sequence.add(structural_child_index as usize)
+                        *frame.alias_sequence.add(structural as usize)
                     };
-                    let subtree_alias_is_named = if subtree_alias_symbol != 0 {
-                        ts_language_symbol_metadata(language, subtree_alias_symbol).named
+                    let child_alias_is_named = if child_alias != 0 {
+                        ts_language_symbol_metadata(language, child_alias).named
                     } else {
                         false
                     };
-
-                    let mut child_field_name = if is_visible {
+                    let mut child_field_name = if frame.is_visible {
                         FieldName::None
                     } else {
-                        field_name
+                        frame.field_name
                     };
-                    let mut map = field_map;
-                    while map < field_map_end {
-                        if !(*map).inherited
-                            && u32::from((*map).child_index) == structural_child_index
-                        {
+                    let mut map = frame.field_map;
+                    while map < frame.field_map_end {
+                        if !(*map).inherited && u32::from((*map).child_index) == structural {
                             child_field_name = FieldName::Named(
                                 *(*language).field_names.add(usize::from((*map).field_id)),
                             );
@@ -1694,23 +1755,21 @@ unsafe fn write_to_string(
                         }
                         map = map.add(1);
                     }
-
-                    write_to_string(
+                    frame.structural_child_index += 1;
+                    stack.push(WriteFrame::new(
                         child,
-                        out,
-                        language,
-                        include_all,
-                        subtree_alias_symbol,
-                        subtree_alias_is_named,
+                        child_alias,
+                        child_alias_is_named,
                         child_field_name,
-                    );
-                    structural_child_index += 1;
+                    ));
                 }
+                continue;
             }
-        }
 
-        if is_visible {
-            out.push(b')');
+            if frame.is_visible {
+                out.push(b')');
+            }
+            stack.pop();
         }
     }
 }
