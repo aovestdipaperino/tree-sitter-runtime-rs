@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/aovestdipaperino/tree-sitter-runtime-rs/main/assets/logo.svg" alt="tree-sitter-runtime-rs logo" width="160"></p>
+
 # tree-sitter-runtime-rs
 
 A port of the [tree-sitter](https://github.com/tree-sitter/tree-sitter) C runtime (v0.27.2) to Rust,

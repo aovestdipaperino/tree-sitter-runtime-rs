@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">tree-sitter-runtime-rs</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b2a33"/>
+      <stop offset="1" stop-color="#15141a"/>
+    </linearGradient>
+    <linearGradient id="rust" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4a261"/>
+      <stop offset="1" stop-color="#d2552a"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <!-- gear ring: the Rust side -->
+  <g transform="translate(128 128)" fill="none" stroke="url(#rust)" stroke-width="10" stroke-linecap="round">
+    <circle r="96" stroke-width="8" stroke-dasharray="22 11.2" opacity=".55"/>
+    <circle r="86"/>
+  </g>
+  <!-- syntax tree -->
+  <g transform="translate(128 132) scale(.86) translate(-128 -128)">
+  <g stroke="#f2efe9" stroke-width="7" stroke-linecap="round" fill="none">
+    <path d="M128 78 L88 128 M128 78 L168 128 M88 128 L68 176 M88 128 L108 176 M168 128 L148 176 M168 128 L188 176"/>
+  </g>
+  <g fill="#f2efe9">
+    <circle cx="68" cy="176" r="9"/><circle cx="108" cy="176" r="9"/>
+    <circle cx="148" cy="176" r="9"/><circle cx="188" cy="176" r="9"/>
+  </g>
+  <g fill="url(#rust)" stroke="#15141a" stroke-width="4">
+    <circle cx="128" cy="78" r="16"/>
+    <circle cx="88" cy="128" r="12"/><circle cx="168" cy="128" r="12"/>
+  </g>
+  </g>
+</svg>
