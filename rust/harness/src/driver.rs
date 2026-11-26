@@ -306,7 +306,23 @@ impl Session {
                 out.push_str(&run_cursor(q, root, 0));
             }
         }
-        // ts_query_copy is not in the 0.26 bindings the Rust side is generated from yet.
+        // A copy keeps the disabled captures and patterns and must behave like the original.
+        let qc = ts_query_copy(q);
+        let _ = writeln!(
+            out,
+            "-- copy patterns={} captures={} strings={}",
+            ts_query_pattern_count(qc),
+            ts_query_capture_count(qc),
+            ts_query_string_count(qc)
+        );
+        if !self.tree.is_null() {
+            let root = ts_tree_root_node(self.tree);
+            for mode in [0u32, 1, 5, 9] {
+                let _ = writeln!(out, "-- copy mode {mode}");
+                out.push_str(&run_cursor(qc, root, mode));
+            }
+        }
+        ts_query_delete(qc);
         ts_query_delete(q);
         out
     }

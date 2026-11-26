@@ -137,4 +137,4 @@ oracle. Rebased to v0.27.2 (ADR-013). TODO: Rust `write_to_string` is recursive 
 
 Use it from another project with `[patch.crates-io] tree-sitter = { path = ".../rust/binding" }`; the semver must match, so tokensave (on `tree-sitter = "0.26"`) needs `"0.27"` and two `child_count()` call sites cast to `usize` (batch_extractor.rs:23, cobol_extractor.rs:413). Tested on a `git archive` copy of tokensave HEAD in the scratchpad (the working tree was untouched): release build succeeds, `cargo test --release --tests` all pass (lib 1077, a 3088-test suite, the rest green), zero failures.
 
-Not done: the harness's own Rust-side bindings are still the 0.26 generation, so `ts_query_copy` stays uncovered; switch the harness to the `tree-sitter` fork to close it.
+The harness bindings are now the 0.27.2 `bindings.rs` (root `binding_rust/bindings.rs` replaced by the fork's copy), and `query_report` runs `ts_query_copy` and four cursor modes on the copy after the disabled-capture/pattern steps. Seeded mutation (copy omits `pattern_map`) aborts the harness, so it is caught. Total still 13143 compared, 0 mismatches.
