@@ -4,7 +4,7 @@ use std::{env, fs, path::PathBuf};
 
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let symbols = manifest.join("../../src/wasm/stdlib-symbols.txt");
+    let symbols = manifest.join("data/stdlib-symbols.txt");
     println!("cargo::rerun-if-changed={}", symbols.display());
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
     fs::copy(&symbols, out.join("stdlib-symbols.txt")).unwrap();

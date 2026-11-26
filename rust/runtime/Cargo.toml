@@ -1,9 +1,14 @@
 [package]
 name = "tree-sitter-runtime-rs"
-version = "0.0.0"
+version = "0.1.0"
 authors = ["Enzo Lombardi <enzinol@gmail.com>"]
 edition = "2024"
-description = "The tree-sitter runtime, ported from C to Rust (work in progress)"
+description = "The tree-sitter C runtime (v0.27.2) ported to Rust, exporting the same C ABI"
+readme = "README.md"
+keywords = ["tree-sitter", "parser", "incremental", "ffi"]
+categories = ["parsing", "external-ffi-bindings"]
+include = ["/src/**", "/c/**", "/build.rs", "/Cargo.toml", "/README.md", "/LICENSE"]
+rust-version = "1.90"
 license = "MIT"
 repository = "https://github.com/aovestdipaperino/tree-sitter-runtime-rs"
 publish = false
