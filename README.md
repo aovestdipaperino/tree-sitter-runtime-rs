@@ -11,3 +11,7 @@ Status: the runtime is fully ported (the only C left is the variadic `TSLexer.lo
 
 `src/` and `include/` are the unmodified upstream v0.27.2 sources (`binding_rust/` is still 0.26.13 and gets forked later), kept as the
 reference the Rust port is verified against (MIT, see `LICENSE.tree-sitter`).
+
+## Star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=aovestdipaperino/tree-sitter-runtime-rs&type=Date)](https://star-history.com/#aovestdipaperino/tree-sitter-runtime-rs&Date)
